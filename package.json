@@ -1,0 +1,20 @@
+{
+  "name": "orqa-note",
+  "private": true,
+  "version": "0.1.0",
+  "description": "The PM Workspace — a unified desktop app for Product Managers",
+  "license": "MIT",
+  "scripts": {
+    "dev": "pnpm --filter @orqa-note/desktop dev",
+    "build": "pnpm --filter @orqa-note/desktop build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["electron", "esbuild"]
+  }
+}
