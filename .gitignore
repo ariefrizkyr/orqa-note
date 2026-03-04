@@ -28,3 +28,6 @@ pnpm-debug.log*
 # AI tools
 .agent/
 .claude/
+
+# Scratchpad
+scratchpad/
