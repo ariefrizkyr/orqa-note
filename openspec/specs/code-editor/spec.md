@@ -66,34 +66,30 @@ The Monaco editor SHALL use a custom theme (`orqa-dark`) that matches the existi
 - **THEN** Monaco uses the `orqa-dark` theme with background `#171717`, foreground `#d4d4d4`, and matching selection/border colors
 
 ### Requirement: Default fallback viewer in ContentArea
-The `ContentArea` component SHALL route files to the code editor as the default fallback for all non-markdown, non-binary file types.
+The `ContentArea` component SHALL route `.pdf` files to the `PdfViewer` component from `@orqa-note/pdf-viewer`. All other binary files continue to show the "Open in Default App" UI. The routing order SHALL be: markdown → PDF → bookmark → binary → code editor (fallback).
+
+#### Scenario: Routing for PDF files
+- **WHEN** user opens a `.pdf` file from the sidebar
+- **THEN** the file is displayed in the PdfViewer component with toolbar and zoom controls
+
+#### Scenario: Routing for other binary files
+- **WHEN** user opens a `.docx`, `.xlsx`, `.png`, or other binary file
+- **THEN** the system displays the existing "Open in Default App" UI
 
 #### Scenario: Routing for code files
 - **WHEN** user opens a `.json`, `.ts`, `.js`, `.css`, `.yaml`, `.py`, or other code file
 - **THEN** the file is displayed in the Monaco code editor
 
-#### Scenario: Routing for unknown text files
-- **WHEN** user opens a file with an unrecognized extension that is not in the binary extensions set
-- **THEN** the file is displayed in the Monaco code editor in plain text mode
-
-#### Scenario: Routing for binary files
-- **WHEN** user opens a file with a known binary extension (`.pdf`, `.docx`, `.xlsx`, `.png`, `.jpg`, `.mp4`, etc.)
-- **THEN** the system displays the existing "Open in Default App" UI
-
 ### Requirement: Binary extension detection
-The system SHALL maintain a set of known binary file extensions and export an `isBinaryExtension()` function from `@orqa-note/code-editor` to determine whether a file should be opened in the code editor or shown with the "Open in Default App" fallback.
+The system SHALL maintain a set of known binary file extensions and export an `isBinaryExtension()` function from `@orqa-note/code-editor`. The `pdf` extension SHALL be removed from the binary extensions set since it is now handled by the PDF viewer.
 
-#### Scenario: Known binary extension
+#### Scenario: PDF extension check
 - **WHEN** `isBinaryExtension('pdf')` is called
-- **THEN** it returns `true`
-
-#### Scenario: Known text extension
-- **WHEN** `isBinaryExtension('json')` is called
 - **THEN** it returns `false`
 
-#### Scenario: Unknown extension
-- **WHEN** `isBinaryExtension('xyz')` is called
-- **THEN** it returns `false` (assume text, let Monaco handle it)
+#### Scenario: Known binary extension
+- **WHEN** `isBinaryExtension('docx')` is called
+- **THEN** it returns `true`
 
 ### Requirement: Remove file dimming in sidebar
 The sidebar file tree SHALL render all files at full opacity regardless of extension. The `isSupported()` function and `SUPPORTED_EXTENSIONS` set SHALL be removed from `file-utils.ts`.
