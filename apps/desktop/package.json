@@ -14,6 +14,7 @@
   "dependencies": {
     "@orqa-note/code-editor": "workspace:*",
     "@orqa-note/editor": "workspace:*",
+    "@orqa-note/pdf-viewer": "workspace:*",
     "chokidar": "^4.0.0",
     "fuse.js": "^7.0.0",
     "react": "^18.3.1",

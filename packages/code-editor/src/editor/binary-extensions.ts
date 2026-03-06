@@ -6,7 +6,7 @@ const BINARY_EXTENSIONS = new Set([
   // Video
   'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v',
   // Documents (binary formats)
-  'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
+  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp',
   // Archives
   'zip', 'tar', 'gz', 'bz2', 'xz', '7z', 'rar', 'dmg', 'iso',
   // Executables / compiled

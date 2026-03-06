@@ -5,6 +5,7 @@ const api: ElectronAPI = {
   fs: {
     readDir: (dirPath: string) => ipcRenderer.invoke('fs:readDir', dirPath),
     readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
+    readBinaryFile: (filePath: string) => ipcRenderer.invoke('fs:readBinaryFile', filePath),
     readBookmark: (filePath: string) => ipcRenderer.invoke('fs:readBookmark', filePath),
     createFile: (dirPath: string, name: string, content?: string) => ipcRenderer.invoke('fs:createFile', dirPath, name, content),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
@@ -16,6 +17,7 @@ const api: ElectronAPI = {
     copyPath: (filePath: string) => ipcRenderer.send('fs:copyPath', filePath),
     openInDefaultApp: (filePath: string) => ipcRenderer.send('fs:openInDefaultApp', filePath),
     listAllFiles: (rootPath: string) => ipcRenderer.invoke('fs:listAllFiles', rootPath),
+    existsFile: (filePath: string) => ipcRenderer.invoke('fs:existsFile', filePath),
     existsDir: (dirPath: string) => ipcRenderer.invoke('fs:existsDir', dirPath),
     fetchPageTitle: (url: string) => ipcRenderer.invoke('fs:fetchPageTitle', url)
   },

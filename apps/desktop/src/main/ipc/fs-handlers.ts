@@ -64,6 +64,11 @@ export function registerFsHandlers(): void {
     return readFile(filePath, 'utf-8')
   })
 
+  ipcMain.handle('fs:readBinaryFile', async (_event, filePath: string) => {
+    const buffer = await readFile(filePath)
+    return buffer
+  })
+
   ipcMain.handle('fs:readBookmark', async (_event, filePath: string) => {
     const content = await readFile(filePath, 'utf-8')
     const bookmark: BookmarkFile = JSON.parse(content)
@@ -133,6 +138,15 @@ export function registerFsHandlers(): void {
       return match ? match[1].trim() : null
     } catch {
       return null
+    }
+  })
+
+  ipcMain.handle('fs:existsFile', async (_event, filePath: string) => {
+    try {
+      const s = await stat(filePath)
+      return s.isFile()
+    } catch {
+      return false
     }
   })
 

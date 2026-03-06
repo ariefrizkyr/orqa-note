@@ -5,6 +5,7 @@ import { OrqaEditor, useAutoSave } from '@orqa-note/editor'
 import type { OrqaEditorHandle } from '@orqa-note/editor'
 import { CodeEditor, isBinaryExtension } from '@orqa-note/code-editor'
 import type { CodeEditorHandle } from '@orqa-note/code-editor'
+import { PdfViewer } from '@orqa-note/pdf-viewer'
 import { markSelfWritten } from '../../hooks/use-fs-events'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
@@ -171,6 +172,37 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
   )
 }
 
+function PdfFileViewer({ filePath }: { filePath: string }) {
+  const [data, setData] = useState<Uint8Array | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setData(null)
+    setError(false)
+    window.electronAPI.fs.readBinaryFile(filePath)
+      .then((buf) => setData(new Uint8Array(buf)))
+      .catch(() => setError(true))
+  }, [filePath])
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Failed to load PDF</p>
+      </div>
+    )
+  }
+
+  if (!data) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Loading...</p>
+      </div>
+    )
+  }
+
+  return <PdfViewer data={data} filePath={filePath} />
+}
+
 export function ContentArea() {
   const { tabs, activeTabId, closeTab } = useTabStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
@@ -193,9 +225,8 @@ export function ContentArea() {
       setFileExists(null)
       return
     }
-    window.electronAPI.fs.readFile(activeTab.filePath)
-      .then(() => setFileExists(true))
-      .catch(() => setFileExists(false))
+    window.electronAPI.fs.existsFile(activeTab.filePath)
+      .then(setFileExists)
   }, [activeTab?.filePath, activeTab?.type])
 
   if (!activeTab) {
@@ -250,6 +281,11 @@ export function ContentArea() {
   // Markdown → Milkdown WYSIWYG editor
   if (ext === 'md') {
     return <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+  }
+
+  // PDF → In-app PDF viewer
+  if (ext === 'pdf') {
+    return <PdfFileViewer filePath={activeTab.filePath!} />
   }
 
   // Binary files → "Open in Default App"

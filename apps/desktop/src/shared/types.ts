@@ -41,6 +41,7 @@ export interface ElectronAPI {
   fs: {
     readDir: (dirPath: string) => Promise<FileNode[]>
     readFile: (filePath: string) => Promise<string>
+    readBinaryFile: (filePath: string) => Promise<Uint8Array>
     readBookmark: (filePath: string) => Promise<BookmarkFile>
     createFile: (dirPath: string, name: string, content?: string) => Promise<string>
     writeFile: (filePath: string, content: string) => Promise<void>
@@ -52,6 +53,7 @@ export interface ElectronAPI {
     copyPath: (filePath: string) => void
     openInDefaultApp: (filePath: string) => void
     listAllFiles: (rootPath: string) => Promise<{ name: string; path: string; extension: string }[]>
+    existsFile: (filePath: string) => Promise<boolean>
     existsDir: (dirPath: string) => Promise<boolean>
     fetchPageTitle: (url: string) => Promise<string | null>
   }
