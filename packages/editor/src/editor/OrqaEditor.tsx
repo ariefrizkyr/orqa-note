@@ -26,7 +26,7 @@ import './milkdown-overrides.css'
 import { extractFrontmatter, prependFrontmatter } from '../serialization/frontmatter'
 import { SlashMenu } from './SlashMenu'
 import { FindBar } from './FindBar'
-import { searchPlugin, searchKeymapPlugin, setFindBarCallbacks } from './find-plugin'
+import { searchPlugin, searchKeymapPlugin, setFindBarCallbacks, setFindBarVisible } from './find-plugin'
 
 export interface OrqaEditorProps {
   initialContent: string
@@ -385,10 +385,12 @@ function MilkdownEditor({
   }, [defaultValue])
 
   return (
-    <div style={{ position: 'relative', height: '100%' }}>
+    <>
+      <div className="orqa-find-bar-anchor">
+        <FindBar visible={findBarVisible} initialMode={findBarMode} onClose={onFindBarClose} />
+      </div>
       <Milkdown />
-      <FindBar visible={findBarVisible} initialMode={findBarMode} onClose={onFindBarClose} />
-    </div>
+    </>
   )
 }
 
@@ -425,6 +427,11 @@ function EditorWithHandle({
     setFindBarCallbacks(openFindBar, closeFindBar)
     return () => setFindBarCallbacks(() => {}, () => {})
   }, [openFindBar, closeFindBar])
+
+  // Keep find bar visibility in sync for Escape key handling
+  useEffect(() => {
+    setFindBarVisible(findBarVisible)
+  }, [findBarVisible])
 
   const save = useCallback(() => {
     if (loading) return

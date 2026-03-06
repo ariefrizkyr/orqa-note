@@ -5,6 +5,7 @@ import { keymap } from '@milkdown/kit/prose/keymap'
 // Callback to toggle the find bar UI — set by the React layer
 let findBarToggle: ((mode: 'find' | 'replace') => void) | undefined
 let findBarClose: (() => void) | undefined
+let findBarVisible = false
 
 export function setFindBarCallbacks(
   toggle: (mode: 'find' | 'replace') => void,
@@ -12,6 +13,10 @@ export function setFindBarCallbacks(
 ) {
   findBarToggle = toggle
   findBarClose = close
+}
+
+export function setFindBarVisible(visible: boolean) {
+  findBarVisible = visible
 }
 
 // The prosemirror-search plugin handles decorations out of the box.
@@ -31,7 +36,7 @@ export const searchKeymapPlugin = $prose(() =>
       return true
     },
     Escape: () => {
-      if (findBarClose) {
+      if (findBarVisible && findBarClose) {
         findBarClose()
         return true
       }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useInstance } from '@milkdown/react'
 import { editorViewCtx } from '@milkdown/kit/core'
+import type { EditorView } from '@milkdown/kit/prose/view'
 import {
   SearchQuery,
   setSearchState,
@@ -37,19 +38,56 @@ export function FindBar({ visible, initialMode, onClose }: FindBarProps) {
   // Focus search input when bar opens
   useEffect(() => {
     if (visible) {
-      // Small delay to ensure DOM is rendered
       requestAnimationFrame(() => searchInputRef.current?.focus())
     }
   }, [visible])
 
-  const getView = useCallback(() => {
+  const getView = useCallback((): EditorView | null => {
     if (loading) return null
     const editor = getInstance()
     if (!editor) return null
     return editor.ctx.get(editorViewCtx)
   }, [loading, getInstance])
 
-  // Update the search query in ProseMirror
+  // Scroll the active match into the visible area of the scroll container
+  const scrollToSelection = useCallback((view: EditorView) => {
+    requestAnimationFrame(() => {
+      const { from } = view.state.selection
+      const coords = view.coordsAtPos(from)
+      const scrollParent = view.dom.closest('.overflow-auto') ?? view.dom.parentElement
+      if (!scrollParent || !coords) return
+      const rect = scrollParent.getBoundingClientRect()
+      if (coords.top < rect.top || coords.bottom > rect.bottom) {
+        const targetY = coords.top - rect.top + scrollParent.scrollTop - rect.height / 3
+        scrollParent.scrollTo({ top: targetY, behavior: 'smooth' })
+      }
+    })
+  }, [])
+
+  // Count matches and find which one is active
+  const computeMatchInfo = useCallback((view: EditorView) => {
+    const state = getSearchState(view.state)
+    if (!state || !state.query.valid || !state.query.search) {
+      setMatchInfo({ current: 0, total: 0 })
+      return
+    }
+    let total = 0
+    let current = 0
+    const { doc, selection } = view.state
+    let result = state.query.findNext(view.state, 0)
+    while (result) {
+      total++
+      if (result.from === selection.from && result.to === selection.to) {
+        current = total
+      }
+      const nextFrom = result.from + 1
+      if (nextFrom > doc.content.size) break
+      result = state.query.findNext(view.state, nextFrom)
+    }
+    setMatchInfo({ current: current || (total > 0 ? 1 : 0), total })
+  }, [])
+
+  // Update the search query in ProseMirror and navigate to the first match
   const updateSearch = useCallback((search: string, cs: boolean, re: boolean, replace: string) => {
     const view = getView()
     if (!view) return
@@ -63,30 +101,14 @@ export function FindBar({ visible, initialMode, onClose }: FindBarProps) {
     const tr = setSearchState(view.state.tr, query)
     view.dispatch(tr)
 
-    // Read match info after state update
-    requestAnimationFrame(() => {
-      const state = getSearchState(view.state)
-      if (!state || !state.query.valid || !search) {
-        setMatchInfo({ current: 0, total: 0 })
-        return
-      }
-      // Count matches by iterating
-      let total = 0
-      let current = 0
-      const { doc, selection } = view.state
-      let result = state.query.findNext(view.state, 0)
-      while (result) {
-        total++
-        if (result.from <= selection.from && result.to >= selection.from && current === 0) {
-          current = total
-        }
-        const nextFrom = result.from + 1
-        if (nextFrom > doc.content.size) break
-        result = state.query.findNext(view.state, nextFrom)
-      }
-      setMatchInfo({ current: current || (total > 0 ? 1 : 0), total })
-    })
-  }, [getView])
+    // Navigate to the first match so it scrolls into view
+    if (search && query.valid) {
+      findNext(view.state, view.dispatch, view)
+      scrollToSelection(view)
+    }
+
+    requestAnimationFrame(() => computeMatchInfo(view))
+  }, [getView, scrollToSelection, computeMatchInfo])
 
   // Update search whenever inputs change
   useEffect(() => {
@@ -94,61 +116,38 @@ export function FindBar({ visible, initialMode, onClose }: FindBarProps) {
     updateSearch(searchText, caseSensitive, useRegex, replaceText)
   }, [searchText, caseSensitive, useRegex, replaceText, visible, updateSearch])
 
-  // Refresh match count after navigation/replace
-  const refreshMatchInfo = useCallback(() => {
-    const view = getView()
-    if (!view) return
-    const state = getSearchState(view.state)
-    if (!state || !state.query.valid || !searchText) {
-      setMatchInfo({ current: 0, total: 0 })
-      return
-    }
-    let total = 0
-    let current = 0
-    const { selection } = view.state
-    let result = state.query.findNext(view.state, 0)
-    while (result) {
-      total++
-      if (result.from === selection.from && result.to === selection.to) {
-        current = total
-      }
-      const nextFrom = result.from + 1
-      if (nextFrom > view.state.doc.content.size) break
-      result = state.query.findNext(view.state, nextFrom)
-    }
-    setMatchInfo({ current: current || (total > 0 ? 1 : 0), total })
-  }, [getView, searchText])
-
   const handleFindNext = useCallback(() => {
     const view = getView()
     if (!view) return
     findNext(view.state, view.dispatch, view)
-    requestAnimationFrame(refreshMatchInfo)
-  }, [getView, refreshMatchInfo])
+    scrollToSelection(view)
+    requestAnimationFrame(() => computeMatchInfo(view))
+  }, [getView, scrollToSelection, computeMatchInfo])
 
   const handleFindPrev = useCallback(() => {
     const view = getView()
     if (!view) return
     findPrev(view.state, view.dispatch, view)
-    requestAnimationFrame(refreshMatchInfo)
-  }, [getView, refreshMatchInfo])
+    scrollToSelection(view)
+    requestAnimationFrame(() => computeMatchInfo(view))
+  }, [getView, scrollToSelection, computeMatchInfo])
 
   const handleReplace = useCallback(() => {
     const view = getView()
     if (!view) return
     replaceNext(view.state, view.dispatch, view)
-    requestAnimationFrame(refreshMatchInfo)
-  }, [getView, refreshMatchInfo])
+    scrollToSelection(view)
+    requestAnimationFrame(() => computeMatchInfo(view))
+  }, [getView, scrollToSelection, computeMatchInfo])
 
   const handleReplaceAll = useCallback(() => {
     const view = getView()
     if (!view) return
     replaceAll(view.state, view.dispatch, view)
-    requestAnimationFrame(refreshMatchInfo)
-  }, [getView, refreshMatchInfo])
+    requestAnimationFrame(() => computeMatchInfo(view))
+  }, [getView, computeMatchInfo])
 
   const handleClose = useCallback(() => {
-    // Clear search decorations
     const view = getView()
     if (view) {
       const query = new SearchQuery({ search: '' })
