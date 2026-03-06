@@ -1,0 +1,18 @@
+{
+  "name": "@orqa-note/editor",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@milkdown/kit": "^7.19.0",
+    "@milkdown/plugin-slash": "^7.19.0",
+    "@milkdown/react": "^7.19.0",
+    "@milkdown/theme-nord": "^7.19.0",
+    "@milkdown/plugin-diagram": "^7.7.0",
+    "@milkdown/utils": "^7.19.0",
+    "mermaid": "^11.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
