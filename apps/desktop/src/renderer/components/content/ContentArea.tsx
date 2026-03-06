@@ -3,6 +3,8 @@ import { useTabStore } from '../../stores/tab-store'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { OrqaEditor, useAutoSave } from '@orqa-note/editor'
 import type { OrqaEditorHandle } from '@orqa-note/editor'
+import { CodeEditor, isBinaryExtension } from '@orqa-note/code-editor'
+import type { CodeEditorHandle } from '@orqa-note/code-editor'
 import { markSelfWritten } from '../../hooks/use-fs-events'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
@@ -76,6 +78,85 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
           onSave={handleSave}
           onChange={handleChange}
           onLinkClick={handleLinkClick}
+        />
+      </div>
+      {saveStatus === 'saved' && (
+        <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-neutral-500">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Auto-saved
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
+  const [content, setContent] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'saved' | null>(null)
+  const editorRef = useRef<CodeEditorHandle>(null)
+  const { markDirty, clearDirty } = useTabStore()
+  const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    setContent(null)
+    setError(false)
+    window.electronAPI.fs.readFile(filePath)
+      .then(setContent)
+      .catch(() => setError(true))
+  }, [filePath])
+
+  const handleSave = useCallback(async (text: string) => {
+    try {
+      markSelfWritten(filePath)
+      await window.electronAPI.fs.writeFile(filePath, text)
+      clearDirty(tabId)
+      setSaveStatus('saved')
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+      fadeTimerRef.current = setTimeout(() => setSaveStatus(null), 2000)
+    } catch {
+      // Save failed silently — user will notice dirty indicator persists
+    }
+  }, [filePath, tabId, clearDirty])
+
+  const handleChange = useCallback(() => {
+    markDirty(tabId)
+  }, [tabId, markDirty])
+
+  useAutoSave({
+    isDirty,
+    onSave: () => editorRef.current?.save(),
+    debounceMs: 2000,
+  })
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Failed to load file</p>
+      </div>
+    )
+  }
+
+  if (content === null) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Loading...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="min-h-0 flex-1">
+        <CodeEditor
+          ref={editorRef}
+          initialContent={content}
+          filePath={filePath}
+          onSave={handleSave}
+          onChange={handleChange}
         />
       </div>
       {saveStatus === 'saved' && (
@@ -166,27 +247,33 @@ export function ContentArea() {
 
   const ext = activeTab.filePath?.split('.').pop()?.toLowerCase()
 
+  // Markdown → Milkdown WYSIWYG editor
   if (ext === 'md') {
     return <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
   }
 
-  // Unsupported file type
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
-      <span className="text-4xl">📄</span>
-      <p className="text-sm">
-        Preview not available for <strong>.{ext}</strong> files
-      </p>
-      <button
-        onClick={() => {
-          if (activeTab.filePath) {
-            window.electronAPI.fs.openInDefaultApp(activeTab.filePath)
-          }
-        }}
-        className="rounded bg-neutral-700 px-4 py-2 text-sm text-white hover:bg-neutral-600"
-      >
-        Open in Default App
-      </button>
-    </div>
-  )
+  // Binary files → "Open in Default App"
+  if (isBinaryExtension(ext)) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
+        <span className="text-4xl">📄</span>
+        <p className="text-sm">
+          Preview not available for <strong>.{ext}</strong> files
+        </p>
+        <button
+          onClick={() => {
+            if (activeTab.filePath) {
+              window.electronAPI.fs.openInDefaultApp(activeTab.filePath)
+            }
+          }}
+          className="rounded bg-neutral-700 px-4 py-2 text-sm text-white hover:bg-neutral-600"
+        >
+          Open in Default App
+        </button>
+      </div>
+    )
+  }
+
+  // Everything else → Monaco code editor
+  return <CodeFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
 }

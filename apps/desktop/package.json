@@ -12,6 +12,7 @@
     "lint": "echo 'lint not configured yet'"
   },
   "dependencies": {
+    "@orqa-note/code-editor": "workspace:*",
     "@orqa-note/editor": "workspace:*",
     "chokidar": "^4.0.0",
     "fuse.js": "^7.0.0",

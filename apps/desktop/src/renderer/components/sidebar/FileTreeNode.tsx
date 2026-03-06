@@ -1,6 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { getFileIcon, isSupported } from '../../lib/file-utils'
-import { getServiceColor, getServiceLabel } from '../../lib/file-utils'
+import { getFileIcon, getServiceColor, getServiceLabel } from '../../lib/file-utils'
 import type { FileNode, BookmarkFile } from '../../../shared/types'
 
 interface FileTreeNodeProps {
@@ -36,7 +35,6 @@ export function FileTreeNode({
 }: FileTreeNodeProps) {
   const [isDragOver, setIsDragOver] = useState(false)
   const renameInputRef = useRef<HTMLInputElement>(null)
-  const supported = node.type === 'directory' || isSupported(node.extension)
 
   useEffect(() => {
     if (isRenaming) {
@@ -111,14 +109,9 @@ export function FileTreeNode({
     <div
       className={`flex cursor-pointer items-center gap-1 rounded-sm px-2 py-1 text-sm transition-colors hover:bg-neutral-800 ${
         isDragOver ? 'bg-neutral-700' : ''
-      } ${!supported && node.type !== 'directory' ? 'opacity-50' : ''}`}
+      }`}
       style={{ paddingLeft: `${depth * 16 + 8}px` }}
       onClick={handleClick}
-      onDoubleClick={() => {
-        if (!supported && node.type === 'file') {
-          window.electronAPI.fs.openInDefaultApp(node.path)
-        }
-      }}
       onContextMenu={(e) => onContextMenu(e, node)}
       draggable
       onDragStart={(e) => onDragStart(e, node)}

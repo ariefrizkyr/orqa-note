@@ -1,13 +1,3 @@
-const SUPPORTED_EXTENSIONS = new Set([
-  'md', 'folio', 'csv', 'xlsx', 'pdf', 'docx', 'pptx',
-  'mmd', 'excalidraw', 'drawio', 'orqa'
-])
-
-export function isSupported(extension?: string): boolean {
-  if (!extension) return false
-  return SUPPORTED_EXTENSIONS.has(extension.toLowerCase())
-}
-
 export function getFileIcon(extension?: string): string {
   if (!extension) return '📄'
   switch (extension.toLowerCase()) {
