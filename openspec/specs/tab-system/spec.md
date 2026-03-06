@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Multi-tab interface
-The app SHALL support opening unlimited files as tabs in a horizontal tab bar. Each tab displays the file name, a type-colored dot indicator, and a close button.
+The app SHALL support opening unlimited files as tabs in a horizontal tab bar. Each tab displays the file name, a type-colored dot indicator, a dirty state indicator when the document has unsaved changes, and a close button.
 
 #### Scenario: Open file as tab
 - **WHEN** user clicks a file in the sidebar
@@ -14,6 +14,10 @@ The app SHALL support opening unlimited files as tabs in a horizontal tab bar. E
 #### Scenario: Middle-click close
 - **WHEN** user middle-clicks a tab
 - **THEN** system closes that tab
+
+#### Scenario: Dirty indicator on tab
+- **WHEN** a document has unsaved changes
+- **THEN** the tab displays a dot indicator next to the file name to signal dirty state
 
 ### Requirement: Tab deduplication
 Clicking a sidebar item for an already-open file SHALL switch to the existing tab rather than opening a duplicate.
