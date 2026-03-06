@@ -32,8 +32,8 @@
 
 ## 6. Testing & Polish
 
-- [ ] 6.1 Test find/replace across formatted text (bold, italic, links, code) — verify marks are preserved on replace
-- [ ] 6.2 Test regex mode including invalid regex patterns (no crash)
-- [ ] 6.3 Test Cmd+F doesn't conflict with Monaco when code editor is active
-- [ ] 6.4 Test large document performance (search responsiveness)
-- [ ] 6.5 Verify Escape properly cleans up decorations and state
+- [x] 6.1 Test find/replace across formatted text (bold, italic, links, code) — verify marks are preserved on replace
+- [x] 6.2 Test regex mode including invalid regex patterns (no crash)
+- [x] 6.3 Test Cmd+F doesn't conflict with Monaco when code editor is active
+- [x] 6.4 Test large document performance (search responsiveness)
+- [x] 6.5 Verify Escape properly cleans up decorations and state
