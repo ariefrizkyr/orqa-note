@@ -13,6 +13,8 @@ interface TabStore {
   reopenLastClosed: () => void
   reorderTabs: (fromIndex: number, toIndex: number) => void
   updateTab: (id: string, updates: Partial<Tab>) => void
+  markDirty: (id: string) => void
+  clearDirty: (id: string) => void
   setTabs: (tabs: Tab[], activeTabId: string | null) => void
   findTabByFilePath: (filePath: string) => Tab | undefined
   reset: () => void
@@ -100,6 +102,16 @@ export const useTabStore = create<TabStore>((set, get) => ({
   updateTab: (id, updates) =>
     set((state) => ({
       tabs: state.tabs.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    })),
+
+  markDirty: (id) =>
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, isDirty: true } : t))
+    })),
+
+  clearDirty: (id) =>
+    set((state) => ({
+      tabs: state.tabs.map((t) => (t.id === id ? { ...t, isDirty: false } : t))
     })),
 
   setTabs: (tabs, activeTabId) => set({ tabs, activeTabId }),

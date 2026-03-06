@@ -4,6 +4,30 @@ import { useTabStore } from '../stores/tab-store'
 import { dirname } from '../lib/file-utils'
 import type { FSEvent } from '../../shared/types'
 
+/**
+ * Tracks file paths written by our own save operations so the fs watcher
+ * can ignore the resulting change events instead of prompting the user.
+ */
+const selfWrittenPaths = new Map<string, ReturnType<typeof setTimeout>>()
+const SELF_WRITE_WINDOW_MS = 2000
+
+export function markSelfWritten(filePath: string): void {
+  const prev = selfWrittenPaths.get(filePath)
+  if (prev) clearTimeout(prev)
+  selfWrittenPaths.set(
+    filePath,
+    setTimeout(() => selfWrittenPaths.delete(filePath), SELF_WRITE_WINDOW_MS),
+  )
+}
+
+function consumeSelfWritten(filePath: string): boolean {
+  const timer = selfWrittenPaths.get(filePath)
+  if (!timer) return false
+  clearTimeout(timer)
+  selfWrittenPaths.delete(filePath)
+  return true
+}
+
 export function useFsEvents(): void {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
 
@@ -39,12 +63,27 @@ export function useFsEvents(): void {
         }
       }
 
-      // Refresh markdown preview for changed files
+      // Handle external file changes
       if (event.type === 'change') {
+        // Ignore change events caused by our own save operations
+        if (consumeSelfWritten(event.path)) return
+
         const tab = useTabStore.getState().findTabByFilePath(event.path)
         if (tab) {
-          // Force re-render by updating a timestamp-like field
-          useTabStore.getState().updateTab(tab.id, { label: tab.label })
+          if (tab.isDirty) {
+            // File changed externally while user has unsaved changes — ask
+            const reload = window.confirm(
+              'File changed externally. Reload and lose your changes, or keep your version?\n\nClick OK to reload, Cancel to keep your version.',
+            )
+            if (reload) {
+              useTabStore.getState().clearDirty(tab.id)
+              // Force re-render by bumping label (triggers content reload)
+              useTabStore.getState().updateTab(tab.id, { label: tab.label })
+            }
+          } else {
+            // Not dirty — silently reload
+            useTabStore.getState().updateTab(tab.id, { label: tab.label })
+          }
         }
       }
     })

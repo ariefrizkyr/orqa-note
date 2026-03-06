@@ -63,6 +63,9 @@ export function Tab({
         style={{ backgroundColor: getTypeDotColor(tab) }}
       />
       <span className="max-w-[140px] truncate">{tab.label}</span>
+      {tab.isDirty && (
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" title="Unsaved changes" />
+      )}
       <button
         className="ml-1 shrink-0 rounded p-0.5 opacity-0 transition-opacity hover:bg-neutral-600 group-hover:opacity-100"
         onClick={(e) => {

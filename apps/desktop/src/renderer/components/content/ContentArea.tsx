@@ -1,12 +1,97 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTabStore } from '../../stores/tab-store'
 import { useWorkspaceStore } from '../../stores/workspace-store'
-import { MarkdownPreview } from './MarkdownPreview'
+import { OrqaEditor, useAutoSave } from '@orqa-note/editor'
+import type { OrqaEditorHandle } from '@orqa-note/editor'
+import { markSelfWritten } from '../../hooks/use-fs-events'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
 
+function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
+  const [content, setContent] = useState<string | null>(null)
+  const [error, setError] = useState(false)
+  const [saveStatus, setSaveStatus] = useState<'saved' | null>(null)
+  const editorRef = useRef<OrqaEditorHandle>(null)
+  const { markDirty, clearDirty } = useTabStore()
+  const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    setContent(null)
+    setError(false)
+    window.electronAPI.fs.readFile(filePath)
+      .then(setContent)
+      .catch(() => setError(true))
+  }, [filePath])
+
+  const handleSave = useCallback(async (markdown: string) => {
+    try {
+      markSelfWritten(filePath)
+      await window.electronAPI.fs.writeFile(filePath, markdown)
+      clearDirty(tabId)
+      setSaveStatus('saved')
+      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
+      fadeTimerRef.current = setTimeout(() => setSaveStatus(null), 2000)
+    } catch {
+      // Save failed silently — user will notice dirty indicator persists
+    }
+  }, [filePath, tabId, clearDirty])
+
+  const handleChange = useCallback(() => {
+    markDirty(tabId)
+  }, [tabId, markDirty])
+
+  const handleLinkClick = useCallback((href: string) => {
+    window.electronAPI?.webview?.openExternal(href)
+  }, [])
+
+  useAutoSave({
+    isDirty,
+    onSave: () => editorRef.current?.save(),
+    debounceMs: 2000,
+  })
+
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Failed to load file</p>
+      </div>
+    )
+  }
+
+  if (content === null) {
+    return (
+      <div className="flex h-full items-center justify-center text-neutral-500">
+        <p className="text-sm">Loading...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <OrqaEditor
+          ref={editorRef}
+          initialContent={content}
+          onSave={handleSave}
+          onChange={handleChange}
+          onLinkClick={handleLinkClick}
+        />
+      </div>
+      {saveStatus === 'saved' && (
+        <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-neutral-500">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Auto-saved
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function ContentArea() {
-  const { tabs, activeTabId, updateTab, closeTab } = useTabStore()
+  const { tabs, activeTabId, closeTab } = useTabStore()
   const activeTab = tabs.find((t) => t.id === activeTabId)
   const [fileExists, setFileExists] = useState<boolean | null>(null)
   const [partition, setPartition] = useState<string | null>(null)
@@ -81,14 +166,8 @@ export function ContentArea() {
 
   const ext = activeTab.filePath?.split('.').pop()?.toLowerCase()
 
-  if (ext === 'md' || ext === 'folio') {
-    return (
-      <MarkdownPreview
-        filePath={activeTab.filePath!}
-        scrollPosition={activeTab.scrollPosition}
-        onScroll={(pos) => updateTab(activeTab.id, { scrollPosition: pos })}
-      />
-    )
+  if (ext === 'md') {
+    return <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
   }
 
   // Unsupported file type
