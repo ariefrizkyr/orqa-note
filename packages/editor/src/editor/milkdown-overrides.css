@@ -263,3 +263,165 @@
 .milkdown-diagram-editor:focus {
   border-color: rgba(136, 192, 208, 0.5);
 }
+
+/* ---- Find in page: search match highlights ---- */
+.ProseMirror-search-match {
+  background-color: rgba(234, 179, 8, 0.3);
+  border-radius: 2px;
+}
+
+.ProseMirror-active-search-match {
+  background-color: rgba(234, 179, 8, 0.7);
+  border-radius: 2px;
+}
+
+/* ---- Find bar ---- */
+.orqa-find-bar {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  z-index: 100;
+  background: #1e1e1e;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.orqa-find-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.orqa-find-bar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.orqa-find-bar-toggle:hover {
+  color: #d4d4d4;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.orqa-find-bar-input-group {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.orqa-find-bar-input-group:focus-within {
+  border-color: rgba(136, 192, 208, 0.5);
+}
+
+.orqa-find-bar-input {
+  width: 180px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #d4d4d4;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.orqa-find-bar-input::placeholder {
+  color: #666;
+}
+
+.orqa-find-bar-replace-input {
+  width: 180px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  outline: none;
+  color: #d4d4d4;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.orqa-find-bar-replace-input:focus {
+  border-color: rgba(136, 192, 208, 0.5);
+}
+.orqa-find-bar-replace-input::placeholder {
+  color: #666;
+}
+
+.orqa-find-bar-option {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 3px;
+  font-family: ui-monospace, 'SF Mono', Monaco, monospace;
+  line-height: 1;
+}
+.orqa-find-bar-option:hover {
+  color: #d4d4d4;
+  background: rgba(255, 255, 255, 0.06);
+}
+.orqa-find-bar-option.active {
+  color: #fff;
+  background: rgba(136, 192, 208, 0.3);
+}
+
+.orqa-find-bar-count {
+  color: #888;
+  font-size: 12px;
+  min-width: 60px;
+  text-align: center;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+
+.orqa-find-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.orqa-find-bar-btn:hover {
+  color: #d4d4d4;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.orqa-find-bar-text-btn {
+  width: auto;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: #d4d4d4;
+}
+.orqa-find-bar-text-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.orqa-find-bar-spacer {
+  width: 20px;
+  flex-shrink: 0;
+}

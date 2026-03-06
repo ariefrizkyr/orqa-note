@@ -1,5 +1,5 @@
 import type { MutableRefObject } from 'react'
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { Editor, rootCtx, defaultValueCtx, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
 import {
   commonmark,
@@ -25,6 +25,8 @@ import '@milkdown/theme-nord/style.css'
 import './milkdown-overrides.css'
 import { extractFrontmatter, prependFrontmatter } from '../serialization/frontmatter'
 import { SlashMenu } from './SlashMenu'
+import { FindBar } from './FindBar'
+import { searchPlugin, searchKeymapPlugin, setFindBarCallbacks } from './find-plugin'
 
 export interface OrqaEditorProps {
   initialContent: string
@@ -35,6 +37,7 @@ export interface OrqaEditorProps {
 
 export interface OrqaEditorHandle {
   save: () => void
+  openFind: () => void
 }
 
 // --- Slash plugin ---
@@ -242,10 +245,16 @@ function MilkdownEditor({
   defaultValue,
   onChangeRef,
   onLinkClickRef,
+  findBarVisible,
+  findBarMode,
+  onFindBarClose,
 }: {
   defaultValue: string
   onChangeRef: MutableRefObject<(() => void) | undefined>
   onLinkClickRef: MutableRefObject<((href: string) => void) | undefined>
+  findBarVisible: boolean
+  findBarMode: 'find' | 'replace'
+  onFindBarClose: () => void
 }) {
   // Keep the module-level callback in sync with the ref
   linkClickCallback = onLinkClickRef.current
@@ -371,9 +380,16 @@ function MilkdownEditor({
       .use(diagramView)
       .use(tableHardbreakPlugin)
       .use(linkClickPlugin)
+      .use(searchPlugin)
+      .use(searchKeymapPlugin)
   }, [defaultValue])
 
-  return <Milkdown />
+  return (
+    <>
+      <Milkdown />
+      <FindBar visible={findBarVisible} initialMode={findBarMode} onClose={onFindBarClose} />
+    </>
+  )
 }
 
 function EditorWithHandle({
@@ -392,6 +408,23 @@ function EditorWithHandle({
   handleRef: MutableRefObject<OrqaEditorHandle | null>
 }) {
   const [loading, getInstance] = useInstance()
+  const [findBarVisible, setFindBarVisible] = useState(false)
+  const [findBarMode, setFindBarMode] = useState<'find' | 'replace'>('find')
+
+  const openFindBar = useCallback((mode: 'find' | 'replace') => {
+    setFindBarMode(mode)
+    setFindBarVisible(true)
+  }, [])
+
+  const closeFindBar = useCallback(() => {
+    setFindBarVisible(false)
+  }, [])
+
+  // Register callbacks so ProseMirror keymap can toggle the find bar
+  useEffect(() => {
+    setFindBarCallbacks(openFindBar, closeFindBar)
+    return () => setFindBarCallbacks(() => {}, () => {})
+  }, [openFindBar, closeFindBar])
 
   const save = useCallback(() => {
     if (loading) return
@@ -405,13 +438,24 @@ function EditorWithHandle({
     onSaveRef.current(full)
   }, [loading, getInstance, frontmatter, onSaveRef])
 
-  // Expose save to parent via mutable ref
-  if (handleRef.current?.save !== save) {
-    handleRef.current = { save }
+  const openFind = useCallback(() => {
+    openFindBar('find')
+  }, [openFindBar])
+
+  // Expose save and openFind to parent via mutable ref
+  if (handleRef.current?.save !== save || handleRef.current?.openFind !== openFind) {
+    handleRef.current = { save, openFind }
   }
 
   return (
-    <MilkdownEditor defaultValue={defaultValue} onChangeRef={onChangeRef} onLinkClickRef={onLinkClickRef} />
+    <MilkdownEditor
+      defaultValue={defaultValue}
+      onChangeRef={onChangeRef}
+      onLinkClickRef={onLinkClickRef}
+      findBarVisible={findBarVisible}
+      findBarMode={findBarMode}
+      onFindBarClose={closeFindBar}
+    />
   )
 }
 

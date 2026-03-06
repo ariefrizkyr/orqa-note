@@ -5,14 +5,15 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
-    "@orqa-note/shared": "workspace:*",
     "@milkdown/kit": "^7.19.0",
+    "@milkdown/plugin-diagram": "^7.7.0",
     "@milkdown/plugin-slash": "^7.19.0",
     "@milkdown/react": "^7.19.0",
     "@milkdown/theme-nord": "^7.19.0",
-    "@milkdown/plugin-diagram": "^7.7.0",
     "@milkdown/utils": "^7.19.0",
+    "@orqa-note/shared": "workspace:*",
     "mermaid": "^11.4.0",
+    "prosemirror-search": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   }
