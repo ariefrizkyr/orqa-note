@@ -188,6 +188,30 @@ const diagramView = $view(diagramSchema.node, () => (node, view, getPos) => {
   }
 })
 
+// --- Shift+Enter in table cells: always insert hardbreak (no paragraph conversion) ---
+const tableHardbreakPlugin = $prose(() => new Plugin({
+  key: new PluginKey('orqa-table-hardbreak'),
+  props: {
+    handleKeyDown(view, event) {
+      if (event.key === 'Enter' && event.shiftKey && !event.ctrlKey && !event.metaKey) {
+        const { state, dispatch } = view
+        const { $from } = state.selection
+        for (let d = $from.depth; d > 0; d--) {
+          const nodeName = $from.node(d).type.name
+          if (nodeName === 'table_cell' || nodeName === 'table_header') {
+            const tr = state.tr
+              .replaceSelectionWith(state.schema.nodes.hardbreak.create())
+              .scrollIntoView()
+            dispatch(tr)
+            return true
+          }
+        }
+      }
+      return false
+    },
+  },
+}))
+
 // --- Open links in external browser on Cmd/Ctrl+Click ---
 // Uses a mutable ref so the callback can be updated without recreating the plugin
 let linkClickCallback: ((href: string) => void) | undefined
@@ -345,6 +369,7 @@ function MilkdownEditor({
       .use(slash)
       .use(diagram)
       .use(diagramView)
+      .use(tableHardbreakPlugin)
       .use(linkClickPlugin)
   }, [defaultValue])
 
