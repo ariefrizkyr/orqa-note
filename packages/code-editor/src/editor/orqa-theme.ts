@@ -1,0 +1,48 @@
+import type { editor } from 'monaco-editor'
+
+export const ORQA_THEME_NAME = 'orqa-dark'
+
+export const orqaThemeData: editor.IStandaloneThemeData = {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [
+    { token: '', foreground: 'd4d4d4', background: '171717' },
+    { token: 'comment', foreground: '6b7280', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'c084fc' },
+    { token: 'string', foreground: '86efac' },
+    { token: 'number', foreground: 'fbbf24' },
+    { token: 'type', foreground: '67e8f9' },
+    { token: 'variable', foreground: 'd4d4d4' },
+    { token: 'delimiter', foreground: 'a3a3a3' },
+  ],
+  colors: {
+    'editor.background': '#171717',
+    'editor.foreground': '#d4d4d4',
+    'editor.lineHighlightBackground': '#ffffff08',
+    'editor.selectionBackground': '#ffffff15',
+    'editor.inactiveSelectionBackground': '#ffffff0a',
+    'editorLineNumber.foreground': '#ffffff59',
+    'editorLineNumber.activeForeground': '#ffffffa0',
+    'editorCursor.foreground': '#d4d4d4',
+    'editorWhitespace.foreground': '#ffffff15',
+    'editorIndentGuide.background': '#ffffff10',
+    'editorIndentGuide.activeBackground': '#ffffff25',
+    'editor.selectionHighlightBackground': '#ffffff10',
+    'editorBracketMatch.background': '#ffffff15',
+    'editorBracketMatch.border': '#ffffff30',
+    'editorGutter.background': '#171717',
+    'editorWidget.background': '#1e1e1e',
+    'editorWidget.border': '#ffffff1a',
+    'input.background': '#262626',
+    'input.border': '#ffffff1a',
+    'input.foreground': '#d4d4d4',
+    'dropdown.background': '#1e1e1e',
+    'dropdown.border': '#ffffff1a',
+    'list.hoverBackground': '#ffffff0d',
+    'list.activeSelectionBackground': '#ffffff15',
+    'scrollbarSlider.background': '#ffffff15',
+    'scrollbarSlider.hoverBackground': '#ffffff25',
+    'scrollbarSlider.activeBackground': '#ffffff30',
+    'minimap.background': '#171717',
+  },
+}
