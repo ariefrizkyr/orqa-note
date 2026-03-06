@@ -385,10 +385,10 @@ function MilkdownEditor({
   }, [defaultValue])
 
   return (
-    <>
+    <div style={{ position: 'relative', height: '100%' }}>
       <Milkdown />
       <FindBar visible={findBarVisible} initialMode={findBarMode} onClose={onFindBarClose} />
-    </>
+    </div>
   )
 }
 
@@ -477,6 +477,7 @@ export const OrqaEditor = forwardRef<OrqaEditorHandle, OrqaEditorProps>(
 
     useImperativeHandle(ref, () => ({
       save: () => handleRef.current?.save(),
+      openFind: () => handleRef.current?.openFind(),
     }), [])
 
     return (
