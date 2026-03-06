@@ -8,7 +8,7 @@
 - [x] 2.1 Create `packages/editor/src/editor/find-plugin.ts` — wrap `prosemirror-search` into a Milkdown-compatible plugin using `$prose`
 - [x] 2.2 Configure the plugin with decoration styles for active and inactive match highlights
 - [x] 2.3 Add keymap bindings: Cmd+F (open find), Cmd+H (open find+replace), Escape (close)
-- [ ] 2.4 Register the plugin in OrqaEditor's `.use()` chain
+- [x] 2.4 Register the plugin in OrqaEditor's `.use()` chain
 
 ## 3. FindBar React Component
 
@@ -27,8 +27,8 @@
 
 ## 5. Editor Handle Extension
 
-- [ ] 5.1 Add `openFind()` method to `OrqaEditorHandle` interface and implementation
-- [ ] 5.2 Export updated types from `packages/editor/src/index.ts`
+- [x] 5.1 Add `openFind()` method to `OrqaEditorHandle` interface and implementation
+- [x] 5.2 Export updated types from `packages/editor/src/index.ts`
 
 ## 6. Testing & Polish
 
