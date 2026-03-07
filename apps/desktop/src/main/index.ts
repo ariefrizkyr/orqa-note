@@ -3,7 +3,7 @@ import { registerFsHandlers } from './ipc/fs-handlers'
 import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerTabHandlers } from './ipc/tab-handlers'
 import { registerWebviewHandlers } from './ipc/webview-handlers'
-import { startWatching, stopWatching, stopAllWatching } from './services/fs-watcher'
+import { startWatching, stopWatching, stopAllWatching, updateWatchedPaths } from './services/fs-watcher'
 import { createWindow } from './services/window-manager'
 
 app.setName('Orqa')
@@ -26,6 +26,13 @@ ipcMain.on('fsWatch:unwatch', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender)
   if (win) {
     stopWatching(win.id)
+  }
+})
+
+ipcMain.on('fsWatch:updatePaths', (event, paths: string[]) => {
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (win) {
+    updateWatchedPaths(win.id, paths)
   }
 })
 

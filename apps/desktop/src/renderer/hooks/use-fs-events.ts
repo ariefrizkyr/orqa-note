@@ -30,6 +30,21 @@ function consumeSelfWritten(filePath: string): boolean {
 
 export function useFsEvents(): void {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
+  const expandedPaths = useWorkspaceStore((s) => s.expandedPaths)
+  const tabs = useTabStore((s) => s.tabs)
+
+  // Sync visible directories to the main process watcher
+  useEffect(() => {
+    if (!workspacePath) return
+    const pathSet = new Set([workspacePath, ...expandedPaths])
+    // Also watch directories of open tabs so we detect external changes
+    for (const tab of tabs) {
+      if (tab.filePath) {
+        pathSet.add(dirname(tab.filePath))
+      }
+    }
+    window.electronAPI.fsWatch.updatePaths([...pathSet])
+  }, [workspacePath, expandedPaths, tabs])
 
   useEffect(() => {
     if (!workspacePath) return

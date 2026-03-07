@@ -74,6 +74,7 @@ export interface ElectronAPI {
   fsWatch: {
     watch: (rootPath: string) => void
     unwatch: () => void
+    updatePaths: (paths: string[]) => void
     onEvent: (callback: (event: FSEvent) => void) => () => void
   }
 }

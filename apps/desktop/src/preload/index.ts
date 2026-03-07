@@ -39,6 +39,7 @@ const api: ElectronAPI = {
   fsWatch: {
     watch: (rootPath: string) => ipcRenderer.send('fsWatch:watch', rootPath),
     unwatch: () => ipcRenderer.send('fsWatch:unwatch'),
+    updatePaths: (paths: string[]) => ipcRenderer.send('fsWatch:updatePaths', paths),
     onEvent: (callback: (event: FSEvent) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, fsEvent: FSEvent) => callback(fsEvent)
       ipcRenderer.on('fsWatch:event', handler)
