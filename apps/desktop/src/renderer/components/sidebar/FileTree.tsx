@@ -4,11 +4,13 @@ import { InlineFileInput } from './InlineFileInput'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
 import { getFileIcon, extname as getExt } from '../../lib/file-utils'
+import { createEmptyXlsxBytes } from '@orqa-note/spreadsheet'
 import type { FileNode, BookmarkFile } from '../../../shared/types'
 
 export interface InlineCreateState {
   path: string
   type: 'file' | 'folder'
+  defaultValue?: string
 }
 
 interface FileTreeProps {
@@ -126,7 +128,13 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
         if (createType === 'folder') {
           await window.electronAPI.fs.createDir(folderPath, name)
         } else {
-          await window.electronAPI.fs.createFile(folderPath, name)
+          const ext = getExt(name)
+          if (ext === 'xlsx') {
+            const xlsxBytes = await createEmptyXlsxBytes()
+            await window.electronAPI.fs.writeBinaryFile(`${folderPath}/${name}`, xlsxBytes)
+          } else {
+            await window.electronAPI.fs.createFile(folderPath, name)
+          }
         }
         // Refresh the folder children
         const children = await window.electronAPI.fs.readDir(folderPath)
@@ -200,6 +208,7 @@ function renderNodes(
           <InlineFileInput
             depth={depth + 1}
             type={inlineCreate.type}
+            defaultValue={inlineCreate.defaultValue}
             onSubmit={onInlineCreateSubmit}
             onCancel={onInlineCreateCancel}
           />

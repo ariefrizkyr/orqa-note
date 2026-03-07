@@ -119,6 +119,14 @@ export function Sidebar() {
     setRenamingPath(null)
   }, [])
 
+  const handleStartCreateSpreadsheet = useCallback(
+    async (folderPath: string) => {
+      await expandFolder(folderPath)
+      setInlineCreate({ path: folderPath, type: 'file', defaultValue: 'Untitled.xlsx' })
+    },
+    [expandFolder]
+  )
+
   const [bookmarkFolderPath, setBookmarkFolderPath] = useState<string | null>(null)
 
   const handleStartCreateBookmark = useCallback((folderPath: string) => {
@@ -190,7 +198,7 @@ export function Sidebar() {
           className="fixed z-50 min-w-[180px] rounded-md border border-neutral-600 bg-neutral-800 py-1 shadow-xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          {getContextMenuActions(contextMenu.node, { onRefresh: handleRefresh, onCreateFile: handleStartCreateFile, onCreateFolder: handleStartCreateFolder, onCreateBookmark: handleStartCreateBookmark, onRename: handleStartRename }).map(
+          {getContextMenuActions(contextMenu.node, { onRefresh: handleRefresh, onCreateFile: handleStartCreateFile, onCreateFolder: handleStartCreateFolder, onCreateBookmark: handleStartCreateBookmark, onCreateSpreadsheet: handleStartCreateSpreadsheet, onRename: handleStartRename }).map(
             (action, i) => (
               <div key={action.label}>
                 {action.separator && i > 0 && (

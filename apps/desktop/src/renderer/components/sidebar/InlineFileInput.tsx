@@ -3,38 +3,52 @@ import { useEffect, useRef } from 'react'
 interface InlineFileInputProps {
   depth: number
   type: 'file' | 'folder'
+  defaultValue?: string
   onSubmit: (name: string) => void
   onCancel: () => void
 }
 
-export function InlineFileInput({ depth, type, onSubmit, onCancel }: InlineFileInputProps) {
+export function InlineFileInput({ depth, type, defaultValue, onSubmit, onCancel }: InlineFileInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const handledRef = useRef(false)
 
   useEffect(() => {
-    inputRef.current?.focus()
+    const input = inputRef.current
+    if (!input) return
+    input.focus()
+    if (defaultValue) {
+      input.value = defaultValue
+      // Select filename part before the extension
+      const dotIndex = defaultValue.lastIndexOf('.')
+      if (dotIndex > 0) {
+        input.setSelectionRange(0, dotIndex)
+      } else {
+        input.select()
+      }
+    }
   }, [])
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      const value = inputRef.current?.value.trim()
-      if (value) {
-        onSubmit(value)
-      } else {
-        onCancel()
-      }
-    } else if (e.key === 'Escape') {
-      onCancel()
-    }
-  }
-
-  const handleBlur = () => {
-    const value = inputRef.current?.value.trim()
+  const submit = (value: string | undefined) => {
+    if (handledRef.current) return
+    handledRef.current = true
     if (value) {
       onSubmit(value)
     } else {
       onCancel()
     }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      submit(inputRef.current?.value.trim())
+    } else if (e.key === 'Escape') {
+      submit(undefined)
+    }
+  }
+
+  const handleBlur = () => {
+    submit(inputRef.current?.value.trim())
   }
 
   return (
