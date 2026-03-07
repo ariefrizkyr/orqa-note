@@ -5,6 +5,7 @@ import { registerTabHandlers } from './ipc/tab-handlers'
 import { registerWebviewHandlers } from './ipc/webview-handlers'
 import { startWatching, stopWatching, stopAllWatching, updateWatchedPaths } from './services/fs-watcher'
 import { createWindow } from './services/window-manager'
+import { buildAppMenu } from './services/app-menu'
 
 app.setName('Orqa')
 
@@ -37,6 +38,7 @@ ipcMain.on('fsWatch:updatePaths', (event, paths: string[]) => {
 })
 
 app.whenReady().then(() => {
+  buildAppMenu()
   createWindow()
 
   app.on('activate', () => {

@@ -49,3 +49,8 @@ const api: ElectronAPI = {
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
+
+// Forward menu events to renderer as DOM custom events
+ipcRenderer.on('menu:open-folder', (_event, folderPath: string) => {
+  window.dispatchEvent(new CustomEvent('workspace:open', { detail: folderPath }))
+})
