@@ -8,8 +8,10 @@ import type { CodeEditorHandle } from '@orqa-note/code-editor'
 import { PdfViewer } from '@orqa-note/pdf-viewer'
 import { SpreadsheetEditor } from '@orqa-note/spreadsheet'
 import type { SpreadsheetEditorHandle } from '@orqa-note/spreadsheet'
+import { ExcalidrawEditor } from '@orqa-note/excalidraw'
+import type { ExcalidrawEditorHandle, ExportImageData } from '@orqa-note/excalidraw'
 import { useFileEditor } from '../../hooks/use-file-editor'
-import { extname } from '../../lib/file-utils'
+import { extname, basename } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
 
@@ -170,6 +172,47 @@ function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: s
   )
 }
 
+function ExcalidrawFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
+  const editorRef = useRef<ExcalidrawEditorHandle>(null)
+  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+
+  useAutoSave({
+    isDirty,
+    onSave: () => editorRef.current?.save(),
+    debounceMs: 2000,
+  })
+
+  const handleExportImage = useCallback(async (data: ExportImageData) => {
+    const ext = data.mimeType === 'image/png' ? 'png' : 'svg'
+    const savePath = await window.electronAPI.fs.showSaveDialog({
+      defaultPath: data.suggestedName,
+      filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
+    })
+    if (!savePath) return
+    const arrayBuffer = await data.blob.arrayBuffer()
+    await window.electronAPI.fs.writeBinaryFile(savePath, new Uint8Array(arrayBuffer))
+  }, [])
+
+  if (error) return <ErrorState message="Failed to load canvas" />
+  if (content === null) return <LoadingState />
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {saveError && <SaveErrorBanner onDismiss={clearSaveError} />}
+      <div className="min-h-0 flex-1">
+        <ExcalidrawEditor
+          ref={editorRef}
+          initialContent={content}
+          name={basename(filePath)}
+          onSave={handleSave}
+          onChange={handleChange}
+          onExportImage={handleExportImage}
+        />
+      </div>
+    </div>
+  )
+}
+
 function PdfFileViewer({ filePath }: { filePath: string }) {
   const [data, setData] = useState<Uint8Array | null>(null)
   const [error, setError] = useState(false)
@@ -276,6 +319,11 @@ export function ContentArea() {
   // Spreadsheet (xlsx, csv)
   if (ext === 'xlsx' || ext === 'csv') {
     return <SpreadsheetFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+  }
+
+  // Excalidraw canvas
+  if (ext === 'excalidraw') {
+    return <ExcalidrawFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
   }
 
   // Binary files

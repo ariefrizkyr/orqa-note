@@ -20,7 +20,8 @@ const api: ElectronAPI = {
     listAllFiles: (rootPath: string) => ipcRenderer.invoke('fs:listAllFiles', rootPath),
     existsFile: (filePath: string) => ipcRenderer.invoke('fs:existsFile', filePath),
     existsDir: (dirPath: string) => ipcRenderer.invoke('fs:existsDir', dirPath),
-    fetchPageTitle: (url: string) => ipcRenderer.invoke('fs:fetchPageTitle', url)
+    fetchPageTitle: (url: string) => ipcRenderer.invoke('fs:fetchPageTitle', url),
+    showSaveDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => ipcRenderer.invoke('fs:showSaveDialog', options)
   },
   workspace: {
     openFolder: () => ipcRenderer.invoke('workspace:openFolder'),

@@ -59,6 +59,7 @@ export interface ElectronAPI {
     existsFile: (filePath: string) => Promise<boolean>
     existsDir: (dirPath: string) => Promise<boolean>
     fetchPageTitle: (url: string) => Promise<string | null>
+    showSaveDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
   }
   workspace: {
     openFolder: () => Promise<string | null>

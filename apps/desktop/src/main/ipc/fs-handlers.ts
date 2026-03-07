@@ -1,4 +1,4 @@
-import { ipcMain, shell, clipboard } from 'electron'
+import { ipcMain, shell, clipboard, dialog, BrowserWindow } from 'electron'
 import { readdir, stat, readFile, writeFile, mkdir, rename } from 'fs/promises'
 import { join, extname, basename, resolve, relative } from 'path'
 import type { FileNode, BookmarkFile } from '../../shared/types'
@@ -291,5 +291,16 @@ export function registerFsHandlers(): void {
     } catch {
       return false
     }
+  })
+
+  ipcMain.handle('fs:showSaveDialog', async (_event, options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return null
+    const result = await dialog.showSaveDialog(win, {
+      defaultPath: options.defaultPath,
+      filters: options.filters,
+    })
+    if (result.canceled || !result.filePath) return null
+    return result.filePath
   })
 }
