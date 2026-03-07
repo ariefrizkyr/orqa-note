@@ -1,0 +1,20 @@
+{
+  "name": "@orqa-note/spreadsheet",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@univerjs/core": "^0.16.1",
+    "@univerjs/presets": "^0.16.1",
+    "@univerjs/preset-sheets-core": "^0.16.1",
+    "@univerjs/preset-sheets-filter": "^0.16.1",
+    "@univerjs/preset-sheets-sort": "^0.16.1",
+    "@zwight/luckyexcel": "^1.1.6",
+    "papaparse": "^5.4.1",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.15"
+  }
+}
