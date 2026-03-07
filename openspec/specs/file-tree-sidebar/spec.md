@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Sidebar mirrors filesystem
-The sidebar file tree SHALL be a 1:1 reflection of the workspace folder on disk. Creating, renaming, moving, or deleting files/folders in the sidebar MUST perform the corresponding filesystem operation on disk.
+The sidebar file tree SHALL be a 1:1 reflection of the workspace folder on disk. Creating, renaming, moving, or deleting files/folders in the sidebar MUST perform the corresponding filesystem operation on disk. When the sidebar is hidden, the file tree component SHALL NOT be rendered but the workspace state (expanded paths, root nodes) SHALL be preserved.
 
 #### Scenario: Initial folder load
 - **WHEN** user opens a workspace folder
@@ -14,6 +14,10 @@ The sidebar file tree SHALL be a 1:1 reflection of the workspace folder on disk.
 #### Scenario: Collapse directory
 - **WHEN** user clicks the collapse chevron on an expanded directory
 - **THEN** children are hidden and the filesystem watcher for that subtree is removed
+
+#### Scenario: Restore sidebar after toggle
+- **WHEN** user hides the sidebar and then shows it again
+- **THEN** the file tree is re-rendered with the same expanded paths and scroll position preserved in the workspace store
 
 ### Requirement: Real-time filesystem sync
 The sidebar SHALL reflect external filesystem changes in real time via chokidar. When files are added, renamed, or deleted outside the app (e.g., in Finder), the sidebar updates within 500ms.
