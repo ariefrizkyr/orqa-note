@@ -17,6 +17,8 @@ export default function App() {
   const setWorkspacePath = useWorkspaceStore((s) => s.setWorkspacePath)
   const setRootNodes = useWorkspaceStore((s) => s.setRootNodes)
   const sidebarWidth = useUIStore((s) => s.sidebarWidth)
+  const sidebarVisible = useUIStore((s) => s.sidebarVisible)
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const { tabs, activeTabId, setTabs } = useTabStore()
 
   useFsEvents()
@@ -35,9 +37,10 @@ export default function App() {
     debouncedSaveTabState(workspacePath, {
       tabs,
       activeTabId,
-      sidebarWidth
+      sidebarWidth,
+      sidebarVisible
     })
-  }, [tabs, activeTabId, workspacePath, sidebarWidth])
+  }, [tabs, activeTabId, workspacePath, sidebarWidth, sidebarVisible])
 
   // Listen for workspace:open events from keyboard handler
   useEffect(() => {
@@ -59,7 +62,8 @@ export default function App() {
         await flushSaveTabState(currentPath, {
           tabs: currentTabs,
           activeTabId: currentActiveId,
-          sidebarWidth: useUIStore.getState().sidebarWidth
+          sidebarWidth: useUIStore.getState().sidebarWidth,
+          sidebarVisible: useUIStore.getState().sidebarVisible
         })
       }
 
@@ -75,6 +79,9 @@ export default function App() {
         setTabs(savedState.tabs, savedState.activeTabId)
         if (savedState.sidebarWidth) {
           useUIStore.getState().setSidebarWidth(savedState.sidebarWidth)
+        }
+        if (savedState.sidebarVisible !== undefined) {
+          useUIStore.getState().setSidebarVisible(savedState.sidebarVisible)
         }
       }
     },
@@ -101,8 +108,25 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-neutral-900">
+      {/* Titlebar — full width drag area with toggle on the right */}
+      <div data-drag className="flex h-11 shrink-0 items-center justify-end border-b border-neutral-700 px-2">
+        <button
+          onClick={toggleSidebar}
+          className="rounded p-1 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
+          title={sidebarVisible ? 'Hide Sidebar (⌘B)' : 'Show Sidebar (⌘B)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+            {sidebarVisible && (
+              <rect x="3" y="3" width="6" height="18" rx="2" fill="currentColor" opacity="0.3" stroke="none" />
+            )}
+          </svg>
+        </button>
+      </div>
+      {/* Main area — sidebar + content */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar onOpenFolder={handleOpenFolder} />
+        {sidebarVisible && <Sidebar />}
         <div className="flex min-w-0 flex-1 flex-col">
           <TabBar />
           <div className="flex-1 overflow-hidden">

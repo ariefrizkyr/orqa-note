@@ -8,11 +8,7 @@ import { useTabStore } from '../../stores/tab-store'
 import { useUIStore } from '../../stores/ui-store'
 import type { FileNode } from '../../../shared/types'
 
-interface SidebarProps {
-  onOpenFolder: () => void
-}
-
-export function Sidebar({ onOpenFolder }: SidebarProps) {
+export function Sidebar() {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
   const openTab = useTabStore((s) => s.openTab)
   const sidebarWidth = useUIStore((s) => s.sidebarWidth)
@@ -173,7 +169,7 @@ export function Sidebar({ onOpenFolder }: SidebarProps) {
         className="flex h-full flex-col border-r border-neutral-700 bg-neutral-900"
         style={{ width: sidebarWidth }}
       >
-        <WorkspaceHeader workspacePath={workspacePath} onOpenFolder={onOpenFolder} />
+        <WorkspaceHeader workspacePath={workspacePath} />
         <FileTree
           onContextMenu={handleContextMenu}
           inlineCreate={inlineCreate}

@@ -3,7 +3,7 @@ import { Tab } from './Tab'
 import { useTabStore } from '../../stores/tab-store'
 
 export function TabBar() {
-  const { tabs, activeTabId, setActiveTab, closeTab, reorderTabs, openTab } = useTabStore()
+  const { tabs, activeTabId, setActiveTab, closeTab, reorderTabs } = useTabStore()
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
   const handleClose = useCallback(
@@ -13,14 +13,6 @@ export function TabBar() {
     },
     [closeTab]
   )
-
-  const handleNewTab = useCallback(() => {
-    openTab({
-      type: 'new-tab',
-      label: 'New Tab',
-      icon: '+'
-    })
-  }, [openTab])
 
   return (
     <div
@@ -47,16 +39,6 @@ export function TabBar() {
           />
         ))}
       </div>
-      <button
-        onClick={handleNewTab}
-        className="flex shrink-0 items-center px-3 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
-        title="New Tab"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
-      </button>
     </div>
   )
 }

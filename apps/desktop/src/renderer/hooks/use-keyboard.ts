@@ -7,6 +7,17 @@ export function useKeyboard(): void {
     function handleKeyDown(e: KeyboardEvent) {
       const meta = e.metaKey || e.ctrlKey
 
+      // Cmd+B — toggle sidebar (skip if inside editor content area)
+      if (meta && e.key === 'b') {
+        const target = e.target as HTMLElement
+        const isInEditor = target.closest('[contenteditable="true"]') || target.closest('.cm-editor')
+        if (!isInEditor) {
+          e.preventDefault()
+          useUIStore.getState().toggleSidebar()
+          return
+        }
+      }
+
       // Cmd+K — toggle search
       if (meta && e.key === 'k') {
         e.preventDefault()
@@ -59,18 +70,6 @@ export function useKeyboard(): void {
         const idx = tabs.findIndex((t) => t.id === activeTabId)
         const prev = (idx - 1 + tabs.length) % tabs.length
         setActiveTab(tabs[prev].id)
-        return
-      }
-
-      // Cmd+O — open folder
-      if (meta && e.key === 'o') {
-        e.preventDefault()
-        window.electronAPI.workspace.openFolder().then((path) => {
-          if (path) {
-            // Workspace opening is handled by the component
-            window.dispatchEvent(new CustomEvent('workspace:open', { detail: path }))
-          }
-        })
         return
       }
     }
