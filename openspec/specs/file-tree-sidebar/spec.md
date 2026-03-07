@@ -68,6 +68,17 @@ Right-clicking a file or folder in the sidebar SHALL display a native context me
 - **WHEN** user selects "Reveal in Finder" from context menu
 - **THEN** system opens Finder with the item selected via `shell.showItemInFolder`
 
+### Requirement: Create new file from context menu
+The file tree context menu SHALL include a "New Spreadsheet" option that creates a blank `.xlsx` file in the selected directory.
+
+#### Scenario: Create new spreadsheet
+- **WHEN** a user right-clicks a directory in the file tree and selects "New Spreadsheet"
+- **THEN** the system SHALL show an inline input field (matching existing "New File" behavior) for the user to enter a file name, defaulting to `.xlsx` extension
+
+#### Scenario: Create xlsx via New File
+- **WHEN** a user selects "New File" and types a filename ending in `.xlsx`
+- **THEN** the system SHALL create a valid blank XLSX workbook file (not an empty text file)
+
 ### Requirement: Drag and drop reorder
 Users SHALL be able to drag files and folders within the sidebar to move them to different directories. Moving an item in the sidebar MUST move the file on disk.
 
