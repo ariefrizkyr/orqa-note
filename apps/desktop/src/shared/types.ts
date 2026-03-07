@@ -28,6 +28,7 @@ export interface WorkspaceState {
   tabs: Tab[]
   activeTabId: string | null
   sidebarWidth: number
+  sidebarVisible?: boolean
 }
 
 export type FSEventType = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
