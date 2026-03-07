@@ -15,6 +15,7 @@
     "@orqa-note/code-editor": "workspace:*",
     "@orqa-note/editor": "workspace:*",
     "@orqa-note/pdf-viewer": "workspace:*",
+    "@orqa-note/excalidraw": "workspace:*",
     "@orqa-note/spreadsheet": "workspace:*",
     "chokidar": "^4.0.0",
     "fuse.js": "^7.0.0",
