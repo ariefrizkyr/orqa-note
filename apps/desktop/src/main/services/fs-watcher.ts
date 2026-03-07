@@ -34,6 +34,7 @@ function queueEvent(win: BrowserWindow, state: WatcherState, event: FSEvent) {
 
 export function startWatching(rootPath: string, win: BrowserWindow): void {
   stopWatching(win.id)
+  console.log(`[fs-watcher] start watching: ${rootPath} (window ${win.id})`)
 
   const fsWatcher = watch(rootPath, {
     ignored: IGNORED,
@@ -57,7 +58,7 @@ export function startWatching(rootPath: string, win: BrowserWindow): void {
   fsWatcher.on('addDir', (path) => queueEvent(win, state, { type: 'addDir', path }))
   fsWatcher.on('unlinkDir', (path) => queueEvent(win, state, { type: 'unlinkDir', path }))
   fsWatcher.on('error', (err) => {
-    console.error('[fs-watcher] error:', err.message)
+    console.error('[fs-watcher] error:', err instanceof Error ? err.message : err)
   })
 }
 
@@ -94,6 +95,7 @@ export function stopWatching(windowId: number): void {
   state.pendingEvents.length = 0
   state.watcher.close()
   watchers.delete(windowId)
+  console.log(`[fs-watcher] stopped watching (window ${windowId})`)
 }
 
 export function stopAllWatching(): void {

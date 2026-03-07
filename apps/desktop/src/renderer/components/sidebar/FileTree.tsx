@@ -3,7 +3,7 @@ import { FileTreeNode } from './FileTreeNode'
 import { InlineFileInput } from './InlineFileInput'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
-import { getFileIcon } from '../../lib/file-utils'
+import { getFileIcon, extname as getExt } from '../../lib/file-utils'
 import type { FileNode, BookmarkFile } from '../../../shared/types'
 
 export interface InlineCreateState {
@@ -133,7 +133,7 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
         updateNodeChildren(folderPath, children)
         // Open the new file as a tab (only for files)
         if (createType === 'file') {
-          const ext = name.includes('.') ? name.split('.').pop() || '' : ''
+          const ext = getExt(name)
           openTab({
             type: 'file',
             filePath: `${folderPath}/${name}`,

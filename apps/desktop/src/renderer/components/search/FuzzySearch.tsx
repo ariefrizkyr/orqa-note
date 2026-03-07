@@ -20,7 +20,6 @@ export function FuzzySearch() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [_allFiles, setAllFiles] = useState<SearchResult[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const fuseRef = useRef<Fuse<SearchResult> | null>(null)
 
@@ -33,7 +32,6 @@ export function FuzzySearch() {
       setSelectedIndex(0)
 
       window.electronAPI.fs.listAllFiles(workspacePath).then((files) => {
-        setAllFiles(files)
         fuseRef.current = new Fuse(files, {
           keys: ['name'],
           threshold: 0.4

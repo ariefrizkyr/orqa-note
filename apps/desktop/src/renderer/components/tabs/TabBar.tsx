@@ -29,6 +29,7 @@ export function TabBar() {
             onClose={(e) => handleClose(e, tab.id)}
             onMouseDown={() => {}}
             onDragStart={() => setDragIndex(index)}
+            onDragEnd={() => setDragIndex(null)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => {
               if (dragIndex !== null && dragIndex !== index) {

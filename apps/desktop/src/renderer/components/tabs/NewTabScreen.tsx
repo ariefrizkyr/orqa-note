@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
-import { detectServiceFromUrl } from '../../lib/file-utils'
+import { detectServiceFromUrl, slugify, createBookmarkContent } from '../../lib/file-utils'
 
 const FILE_CARDS = [
   { label: 'Markdown', ext: '.md', icon: '📝', description: 'Create a new document' },
@@ -56,12 +56,8 @@ export function NewTabScreen() {
 
   const handleCreateBookmark = useCallback(async () => {
     if (!workspacePath || !bookmarkUrl || !bookmarkLabel) return
-    const slug = bookmarkLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-    const content = JSON.stringify(
-      { type: 'bookmark', url: bookmarkUrl, label: bookmarkLabel, service: bookmarkService },
-      null,
-      2
-    )
+    const slug = slugify(bookmarkLabel)
+    const content = createBookmarkContent(bookmarkUrl, bookmarkLabel, bookmarkService)
     const filePath = await window.electronAPI.fs.createFile(workspacePath, `${slug}.orqa`, content)
     openTab({
       type: 'bookmark',

@@ -1,22 +1,61 @@
-import { ipcMain, shell, clipboard, dialog, BrowserWindow } from 'electron'
+import { ipcMain, shell, clipboard } from 'electron'
 import { readdir, stat, readFile, writeFile, mkdir, rename } from 'fs/promises'
-import { join, extname, basename } from 'path'
+import { join, extname, basename, resolve, relative } from 'path'
 import type { FileNode, BookmarkFile } from '../../shared/types'
 
-interface SimpleFile {
+interface FileEntry {
   name: string
   path: string
   extension: string
 }
 
-const IGNORED_DIRS = new Set(['node_modules', '.git', '.DS_Store'])
+const IGNORED_NAMES = new Set(['node_modules', '.git', '.DS_Store'])
 
-async function listAllFilesRecursive(dirPath: string): Promise<SimpleFile[]> {
-  const results: SimpleFile[] = []
+const log = {
+  error: (context: string, err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err)
+    console.error(`[fs] ${context}:`, message)
+  },
+  warn: (context: string, msg: string) => {
+    console.warn(`[fs] ${context}:`, msg)
+  },
+}
+
+// Track known workspace roots so we can validate paths
+const activeWorkspaceRoots = new Set<string>()
+
+export function addWorkspaceRoot(root: string): void {
+  activeWorkspaceRoots.add(resolve(root))
+}
+
+export function removeWorkspaceRoot(root: string): void {
+  activeWorkspaceRoots.delete(resolve(root))
+}
+
+function isWithinWorkspace(targetPath: string): boolean {
+  if (activeWorkspaceRoots.size === 0) return true
+  const resolved = resolve(targetPath)
+  for (const root of activeWorkspaceRoots) {
+    const rel = relative(root, resolved)
+    if (!rel.startsWith('..') && !rel.startsWith('/')) return true
+  }
+  return false
+}
+
+function assertWithinWorkspace(targetPath: string, operation: string): void {
+  if (!isWithinWorkspace(targetPath)) {
+    const msg = `Path outside workspace boundary: ${targetPath}`
+    log.warn(operation, msg)
+    throw new Error(msg)
+  }
+}
+
+async function listAllFilesRecursive(dirPath: string): Promise<FileEntry[]> {
+  const results: FileEntry[] = []
   const entries = await readdir(dirPath, { withFileTypes: true })
 
   for (const entry of entries) {
-    if (entry.name.startsWith('.') || IGNORED_DIRS.has(entry.name)) continue
+    if (entry.name.startsWith('.') || IGNORED_NAMES.has(entry.name)) continue
     const fullPath = join(dirPath, entry.name)
     if (entry.isDirectory()) {
       results.push(...(await listAllFilesRecursive(fullPath)))
@@ -36,7 +75,7 @@ async function readDirShallow(dirPath: string): Promise<FileNode[]> {
   const nodes: FileNode[] = []
 
   for (const entry of entries) {
-    if (entry.name === '.DS_Store') continue
+    if (IGNORED_NAMES.has(entry.name)) continue
 
     const fullPath = join(dirPath, entry.name)
     const isDir = entry.isDirectory()
@@ -55,61 +94,133 @@ async function readDirShallow(dirPath: string): Promise<FileNode[]> {
   })
 }
 
+function isValidUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export function registerFsHandlers(): void {
   ipcMain.handle('fs:readDir', async (_event, dirPath: string) => {
-    return readDirShallow(dirPath)
+    try {
+      assertWithinWorkspace(dirPath, 'readDir')
+      return await readDirShallow(dirPath)
+    } catch (err) {
+      log.error('readDir', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
-    return readFile(filePath, 'utf-8')
+    try {
+      assertWithinWorkspace(filePath, 'readFile')
+      return await readFile(filePath, 'utf-8')
+    } catch (err) {
+      log.error('readFile', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:readBinaryFile', async (_event, filePath: string) => {
-    const buffer = await readFile(filePath)
-    return buffer
+    try {
+      assertWithinWorkspace(filePath, 'readBinaryFile')
+      return await readFile(filePath)
+    } catch (err) {
+      log.error('readBinaryFile', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:readBookmark', async (_event, filePath: string) => {
-    const content = await readFile(filePath, 'utf-8')
-    const bookmark: BookmarkFile = JSON.parse(content)
-    if (bookmark.type !== 'bookmark' || !bookmark.url || !bookmark.label) {
-      throw new Error('Invalid bookmark file')
+    try {
+      assertWithinWorkspace(filePath, 'readBookmark')
+      const content = await readFile(filePath, 'utf-8')
+      const bookmark: BookmarkFile = JSON.parse(content)
+      if (bookmark.type !== 'bookmark' || !bookmark.url || !bookmark.label) {
+        throw new Error('Invalid bookmark file')
+      }
+      return bookmark
+    } catch (err) {
+      log.error('readBookmark', err)
+      throw err
     }
-    return bookmark
   })
 
   ipcMain.handle('fs:createFile', async (_event, dirPath: string, name: string, content?: string) => {
-    const filePath = join(dirPath, name)
-    await writeFile(filePath, content || '', 'utf-8')
-    return filePath
+    try {
+      const filePath = join(dirPath, name)
+      assertWithinWorkspace(filePath, 'createFile')
+      await writeFile(filePath, content || '', 'utf-8')
+      return filePath
+    } catch (err) {
+      log.error('createFile', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string) => {
-    await writeFile(filePath, content, 'utf-8')
+    try {
+      assertWithinWorkspace(filePath, 'writeFile')
+      await writeFile(filePath, content, 'utf-8')
+    } catch (err) {
+      log.error('writeFile', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:createDir', async (_event, dirPath: string, name: string) => {
-    const fullPath = join(dirPath, name)
-    await mkdir(fullPath, { recursive: true })
-    return fullPath
+    try {
+      const fullPath = join(dirPath, name)
+      assertWithinWorkspace(fullPath, 'createDir')
+      await mkdir(fullPath, { recursive: true })
+      return fullPath
+    } catch (err) {
+      log.error('createDir', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:rename', async (_event, oldPath: string, newPath: string) => {
-    await rename(oldPath, newPath)
+    try {
+      assertWithinWorkspace(oldPath, 'rename')
+      assertWithinWorkspace(newPath, 'rename')
+      await rename(oldPath, newPath)
+    } catch (err) {
+      log.error('rename', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:trash', async (_event, filePath: string) => {
-    await shell.trashItem(filePath)
+    try {
+      assertWithinWorkspace(filePath, 'trash')
+      await shell.trashItem(filePath)
+    } catch (err) {
+      log.error('trash', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:move', async (_event, srcPath: string, destPath: string) => {
-    const fileName = basename(srcPath)
-    const newPath = join(destPath, fileName)
-    await rename(srcPath, newPath)
+    try {
+      assertWithinWorkspace(srcPath, 'move')
+      assertWithinWorkspace(destPath, 'move')
+      const fileName = basename(srcPath)
+      const newPath = join(destPath, fileName)
+      await rename(srcPath, newPath)
+    } catch (err) {
+      log.error('move', err)
+      throw err
+    }
   })
 
   ipcMain.on('fs:revealInFinder', (_event, filePath: string) => {
-    shell.showItemInFolder(filePath)
+    if (isWithinWorkspace(filePath)) {
+      shell.showItemInFolder(filePath)
+    }
   })
 
   ipcMain.on('fs:copyPath', (_event, filePath: string) => {
@@ -117,26 +228,39 @@ export function registerFsHandlers(): void {
   })
 
   ipcMain.on('fs:openInDefaultApp', (_event, filePath: string) => {
-    shell.openPath(filePath)
+    if (isWithinWorkspace(filePath)) {
+      shell.openPath(filePath)
+    }
   })
 
   ipcMain.handle('fs:listAllFiles', async (_event, rootPath: string) => {
-    return listAllFilesRecursive(rootPath)
+    try {
+      assertWithinWorkspace(rootPath, 'listAllFiles')
+      return await listAllFilesRecursive(rootPath)
+    } catch (err) {
+      log.error('listAllFiles', err)
+      throw err
+    }
   })
 
   ipcMain.handle('fs:fetchPageTitle', async (_event, url: string) => {
+    if (!isValidUrl(url)) {
+      log.warn('fetchPageTitle', `Invalid URL rejected: ${url}`)
+      return null
+    }
     try {
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 10000)
       const res = await fetch(url, {
         signal: controller.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0' }
+        headers: { 'User-Agent': 'OrqaNote/1.0' }
       })
       clearTimeout(timeout)
       const html = await res.text()
       const match = html.match(/<title[^>]*>([^<]+)<\/title>/i)
       return match ? match[1].trim() : null
-    } catch {
+    } catch (err) {
+      log.error('fetchPageTitle', err)
       return null
     }
   })

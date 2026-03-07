@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'path'
 import { stopWatching } from './fs-watcher'
+import { addWorkspaceRoot, removeWorkspaceRoot } from '../ipc/fs-handlers'
 
 // Map of window id → workspace path for multi-window support
 const windowWorkspacePaths = new Map<number, string>()
@@ -24,6 +25,7 @@ export function createWindow(workspacePath?: string): BrowserWindow {
 
   if (workspacePath) {
     windowWorkspacePaths.set(win.id, workspacePath)
+    addWorkspaceRoot(workspacePath)
   }
 
   // In dev, load from vite dev server; in prod, load the built file
@@ -35,6 +37,8 @@ export function createWindow(workspacePath?: string): BrowserWindow {
 
   win.on('closed', () => {
     stopWatching(win.id)
+    const wsPath = windowWorkspacePaths.get(win.id)
+    if (wsPath) removeWorkspaceRoot(wsPath)
     windowWorkspacePaths.delete(win.id)
   })
 

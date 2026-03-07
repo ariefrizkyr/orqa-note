@@ -1,15 +1,6 @@
 import type { FileNode } from '../../../shared/types'
 import { dirname } from '../../lib/file-utils'
 
-export async function showContextMenu(_node: FileNode): Promise<void> {
-  // Context menu actions are handled via prompts since we can't use
-  // Electron Menu directly from renderer. We use simple window.prompt
-  // as a v1 approach — can be replaced with a custom modal later.
-  // For v1, we create a simple div-based context menu
-  // The actual native context menu requires IPC to main process Menu.buildFromTemplate
-  // This is handled in Sidebar.tsx via IPC
-}
-
 export interface ContextMenuAction {
   label: string
   action: () => Promise<void> | void
@@ -20,10 +11,10 @@ export function getContextMenuActions(
   node: FileNode,
   callbacks: {
     onRefresh: () => void
-    onCreateFile?: (folderPath: string) => void
-    onCreateFolder?: (folderPath: string) => void
-    onCreateBookmark?: (folderPath: string) => void
-    onRename?: (node: FileNode) => void
+    onCreateFile: (folderPath: string) => void
+    onCreateFolder: (folderPath: string) => void
+    onCreateBookmark: (folderPath: string) => void
+    onRename: (node: FileNode) => void
   }
 ): ContextMenuAction[] {
   const parentDir = node.type === 'directory' ? node.path : dirname(node.path)
@@ -31,47 +22,29 @@ export function getContextMenuActions(
   return [
     {
       label: 'New File',
-      action: async () => {
+      action: () => {
         const target = node.type === 'directory' ? node.path : parentDir
-        if (callbacks.onCreateFile) {
-          callbacks.onCreateFile(target)
-          return
-        }
-        const name = window.prompt('File name:')
-        if (!name) return
-        await window.electronAPI.fs.createFile(target, name)
-        callbacks.onRefresh()
+        callbacks.onCreateFile(target)
       }
     },
     {
       label: 'New Bookmark',
       action: () => {
         const target = node.type === 'directory' ? node.path : parentDir
-        if (callbacks.onCreateBookmark) {
-          callbacks.onCreateBookmark(target)
-        }
+        callbacks.onCreateBookmark(target)
       }
     },
     {
       label: 'New Folder',
-      action: async () => {
+      action: () => {
         const target = node.type === 'directory' ? node.path : parentDir
-        if (callbacks.onCreateFolder) {
-          callbacks.onCreateFolder(target)
-          return
-        }
-        const name = window.prompt('Folder name:')
-        if (!name) return
-        await window.electronAPI.fs.createDir(target, name)
-        callbacks.onRefresh()
+        callbacks.onCreateFolder(target)
       }
     },
     {
       label: 'Rename',
       action: () => {
-        if (callbacks.onRename) {
-          callbacks.onRename(node)
-        }
+        callbacks.onRename(node)
       },
       separator: true
     },

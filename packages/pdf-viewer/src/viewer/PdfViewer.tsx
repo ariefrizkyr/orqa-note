@@ -10,7 +10,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 export interface PdfViewerProps {
   data: Uint8Array
-  filePath?: string
 }
 
 const MIN_ZOOM = 25
@@ -60,7 +59,7 @@ export function PdfViewer({ data }: PdfViewerProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         let maxRatio = 0
-        let mostVisiblePage = currentPage
+        let mostVisiblePage = -1
         const visiblePages: number[] = []
 
         for (const entry of entries) {
@@ -72,7 +71,7 @@ export function PdfViewer({ data }: PdfViewerProps) {
           }
         }
 
-        if (maxRatio > 0) setCurrentPage(mostVisiblePage)
+        if (maxRatio > 0 && mostVisiblePage > 0) setCurrentPage(mostVisiblePage)
 
         if (visiblePages.length > 0) {
           const minVisible = Math.min(...visiblePages)
@@ -92,7 +91,7 @@ export function PdfViewer({ data }: PdfViewerProps) {
     }
 
     return () => observer.disconnect()
-  }, [numPages, currentPage])
+  }, [numPages])
 
   // Register page ref for intersection observer
   const setPageRef = useCallback(

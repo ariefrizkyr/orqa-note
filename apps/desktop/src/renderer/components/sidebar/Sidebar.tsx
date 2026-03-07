@@ -6,6 +6,7 @@ import { getContextMenuActions } from './ContextMenu'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
 import { useUIStore } from '../../stores/ui-store'
+import { dirname, slugify, createBookmarkContent } from '../../lib/file-utils'
 import type { FileNode } from '../../../shared/types'
 
 export function Sidebar() {
@@ -102,7 +103,7 @@ export function Sidebar() {
 
   const handleRenameSubmit = useCallback(
     async (node: FileNode, newName: string) => {
-      const parentDir = node.path.substring(0, node.path.lastIndexOf('/'))
+      const parentDir = dirname(node.path)
       const newPath = parentDir + '/' + newName
       try {
         await window.electronAPI.fs.rename(node.path, newPath)
@@ -127,12 +128,8 @@ export function Sidebar() {
   const handleBookmarkSubmit = useCallback(
     async (data: { url: string; label: string; service: string }) => {
       if (!bookmarkFolderPath) return
-      const slug = data.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-      const content = JSON.stringify(
-        { type: 'bookmark', url: data.url, label: data.label, service: data.service },
-        null,
-        2
-      )
+      const slug = slugify(data.label)
+      const content = createBookmarkContent(data.url, data.label, data.service)
       const filePath = await window.electronAPI.fs.createFile(bookmarkFolderPath, `${slug}.orqa`, content)
       // Refresh folder children
       const children = await window.electronAPI.fs.readDir(bookmarkFolderPath)

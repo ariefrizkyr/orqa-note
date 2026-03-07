@@ -33,6 +33,18 @@ export function useFsEvents(): void {
   const expandedPaths = useWorkspaceStore((s) => s.expandedPaths)
   const tabs = useTabStore((s) => s.tabs)
 
+  // Warn before closing window with unsaved changes
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      const hasDirty = useTabStore.getState().tabs.some((t) => t.isDirty)
+      if (hasDirty) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [])
+
   // Sync visible directories to the main process watcher
   useEffect(() => {
     if (!workspacePath) return
@@ -85,8 +97,10 @@ export function useFsEvents(): void {
 
         const tab = useTabStore.getState().findTabByFilePath(event.path)
         if (tab && !tab.isDirty) {
-          // Not dirty — silently reload
-          useTabStore.getState().updateTab(tab.id, { label: tab.label })
+          // Not dirty — force content reload by bumping version
+          useTabStore.getState().updateTab(tab.id, {
+            contentVersion: (tab.contentVersion ?? 0) + 1
+          })
         }
         // If dirty, keep the user's version silently
       }

@@ -1,5 +1,5 @@
 import type { Tab as TabType } from '../../../shared/types'
-import { getServiceColor } from '../../lib/file-utils'
+import { getServiceColor, extname } from '../../lib/file-utils'
 
 interface TabProps {
   tab: TabType
@@ -8,6 +8,7 @@ interface TabProps {
   onClose: (e: React.MouseEvent) => void
   onMouseDown: (e: React.MouseEvent) => void
   onDragStart: (e: React.DragEvent) => void
+  onDragEnd: (e: React.DragEvent) => void
   onDragOver: (e: React.DragEvent) => void
   onDrop: (e: React.DragEvent) => void
 }
@@ -16,7 +17,7 @@ function getTypeDotColor(tab: TabType): string {
   if (tab.type === 'bookmark') {
     return getServiceColor('other')
   }
-  const ext = tab.filePath?.split('.').pop()?.toLowerCase()
+  const ext = tab.filePath ? extname(tab.filePath) : ''
   switch (ext) {
     case 'md': return '#60A5FA'
     case 'csv': case 'xlsx': return '#34D399'
@@ -33,6 +34,7 @@ export function Tab({
   onClose,
   onMouseDown,
   onDragStart,
+  onDragEnd,
   onDragOver,
   onDrop
 }: TabProps) {
@@ -55,6 +57,7 @@ export function Tab({
       }}
       draggable
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >

@@ -71,3 +71,11 @@ export function extname(path: string): string {
   if (dotIdx <= 0) return ''
   return name.slice(dotIdx + 1).toLowerCase()
 }
+
+export function slugify(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+}
+
+export function createBookmarkContent(url: string, label: string, service: string): string {
+  return JSON.stringify({ type: 'bookmark', url, label, service }, null, 2)
+}

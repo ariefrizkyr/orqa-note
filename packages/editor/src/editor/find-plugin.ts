@@ -15,7 +15,7 @@ export function setFindBarCallbacks(
   findBarClose = close
 }
 
-export function setFindBarVisible(visible: boolean) {
+export function syncFindBarVisible(visible: boolean) {
   findBarVisible = visible
 }
 

@@ -1,4 +1,4 @@
-import { Menu, app, dialog, BrowserWindow } from 'electron'
+import { Menu, dialog, BrowserWindow } from 'electron'
 import { addRecentWorkspace } from './state-persistence'
 import { createWindow, getWindowWorkspacePath } from './window-manager'
 

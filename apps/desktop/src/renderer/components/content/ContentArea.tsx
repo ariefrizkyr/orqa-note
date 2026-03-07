@@ -6,38 +6,41 @@ import type { OrqaEditorHandle } from '@orqa-note/editor'
 import { CodeEditor, isBinaryExtension } from '@orqa-note/code-editor'
 import type { CodeEditorHandle } from '@orqa-note/code-editor'
 import { PdfViewer } from '@orqa-note/pdf-viewer'
-import { markSelfWritten } from '../../hooks/use-fs-events'
+import { useFileEditor } from '../../hooks/use-file-editor'
+import { extname } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
 
+function SaveErrorBanner({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="flex items-center gap-2 bg-red-900/60 px-3 py-1.5 text-xs text-red-200">
+      <span>Failed to save file. Check disk space and permissions.</span>
+      <button onClick={onDismiss} className="ml-auto rounded px-2 py-0.5 hover:bg-red-800">
+        Dismiss
+      </button>
+    </div>
+  )
+}
+
+function LoadingState() {
+  return (
+    <div className="flex h-full items-center justify-center text-neutral-500">
+      <p className="text-sm">Loading...</p>
+    </div>
+  )
+}
+
+function ErrorState({ message }: { message: string }) {
+  return (
+    <div className="flex h-full items-center justify-center text-neutral-500">
+      <p className="text-sm">{message}</p>
+    </div>
+  )
+}
+
 function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
-  const [content, setContent] = useState<string | null>(null)
-  const [error, setError] = useState(false)
   const editorRef = useRef<OrqaEditorHandle>(null)
-  const { markDirty, clearDirty } = useTabStore()
-  const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
-
-  useEffect(() => {
-    setContent(null)
-    setError(false)
-    window.electronAPI.fs.readFile(filePath)
-      .then(setContent)
-      .catch(() => setError(true))
-  }, [filePath])
-
-  const handleSave = useCallback(async (markdown: string) => {
-    try {
-      markSelfWritten(filePath)
-      await window.electronAPI.fs.writeFile(filePath, markdown)
-      clearDirty(tabId)
-    } catch {
-      // Save failed silently — user will notice dirty indicator persists
-    }
-  }, [filePath, tabId, clearDirty])
-
-  const handleChange = useCallback(() => {
-    markDirty(tabId)
-  }, [tabId, markDirty])
+  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
 
   const handleLinkClick = useCallback((href: string) => {
     window.electronAPI?.webview?.openExternal(href)
@@ -49,24 +52,12 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
     debounceMs: 2000,
   })
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Failed to load file</p>
-      </div>
-    )
-  }
-
-  if (content === null) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Loading...</p>
-      </div>
-    )
-  }
+  if (error) return <ErrorState message="Failed to load file" />
+  if (content === null) return <LoadingState />
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {saveError && <SaveErrorBanner onDismiss={clearSaveError} />}
       <div className="min-h-0 flex-1 overflow-auto">
         <OrqaEditor
           ref={editorRef}
@@ -81,33 +72,8 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
 }
 
 function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
-  const [content, setContent] = useState<string | null>(null)
-  const [error, setError] = useState(false)
   const editorRef = useRef<CodeEditorHandle>(null)
-  const { markDirty, clearDirty } = useTabStore()
-  const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
-
-  useEffect(() => {
-    setContent(null)
-    setError(false)
-    window.electronAPI.fs.readFile(filePath)
-      .then(setContent)
-      .catch(() => setError(true))
-  }, [filePath])
-
-  const handleSave = useCallback(async (text: string) => {
-    try {
-      markSelfWritten(filePath)
-      await window.electronAPI.fs.writeFile(filePath, text)
-      clearDirty(tabId)
-    } catch {
-      // Save failed silently — user will notice dirty indicator persists
-    }
-  }, [filePath, tabId, clearDirty])
-
-  const handleChange = useCallback(() => {
-    markDirty(tabId)
-  }, [tabId, markDirty])
+  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
 
   useAutoSave({
     isDirty,
@@ -115,24 +81,12 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
     debounceMs: 2000,
   })
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Failed to load file</p>
-      </div>
-    )
-  }
-
-  if (content === null) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Loading...</p>
-      </div>
-    )
-  }
+  if (error) return <ErrorState message="Failed to load file" />
+  if (content === null) return <LoadingState />
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
+      {saveError && <SaveErrorBanner onDismiss={clearSaveError} />}
       <div className="min-h-0 flex-1">
         <CodeEditor
           ref={editorRef}
@@ -158,23 +112,10 @@ function PdfFileViewer({ filePath }: { filePath: string }) {
       .catch(() => setError(true))
   }, [filePath])
 
-  if (error) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Failed to load PDF</p>
-      </div>
-    )
-  }
+  if (error) return <ErrorState message="Failed to load PDF" />
+  if (!data) return <LoadingState />
 
-  if (!data) {
-    return (
-      <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Loading...</p>
-      </div>
-    )
-  }
-
-  return <PdfViewer data={data} filePath={filePath} />
+  return <PdfViewer data={data} />
 }
 
 export function ContentArea() {
@@ -250,19 +191,19 @@ export function ContentArea() {
     )
   }
 
-  const ext = activeTab.filePath?.split('.').pop()?.toLowerCase()
+  const ext = activeTab.filePath ? extname(activeTab.filePath) : ''
 
-  // Markdown → Milkdown WYSIWYG editor
+  // Markdown
   if (ext === 'md') {
     return <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
   }
 
-  // PDF → In-app PDF viewer
+  // PDF
   if (ext === 'pdf') {
     return <PdfFileViewer filePath={activeTab.filePath!} />
   }
 
-  // Binary files → "Open in Default App"
+  // Binary files
   if (isBinaryExtension(ext)) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
@@ -284,6 +225,6 @@ export function ContentArea() {
     )
   }
 
-  // Everything else → Monaco code editor
+  // Everything else — Monaco code editor
   return <CodeFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
 }

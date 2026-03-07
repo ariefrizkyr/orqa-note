@@ -22,6 +22,7 @@ export interface Tab {
   icon: string
   scrollPosition?: number
   isDirty?: boolean
+  contentVersion?: number
 }
 
 export interface WorkspaceState {

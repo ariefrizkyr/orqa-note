@@ -1,6 +1,6 @@
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
-import { basename } from '../../lib/file-utils'
+import { basename, extname } from '../../lib/file-utils'
 
 export function StatusBar() {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
@@ -11,7 +11,7 @@ export function StatusBar() {
   const fileType = activeTab
     ? activeTab.type === 'bookmark'
       ? 'Bookmark'
-      : activeTab.filePath?.split('.').pop()?.toUpperCase() || 'File'
+      : (activeTab.filePath ? extname(activeTab.filePath).toUpperCase() : '') || 'File'
     : null
 
   return (

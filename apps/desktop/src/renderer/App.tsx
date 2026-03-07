@@ -10,7 +10,7 @@ import { useTabStore } from './stores/tab-store'
 import { useUIStore } from './stores/ui-store'
 import { useFsEvents } from './hooks/use-fs-events'
 import { useKeyboard } from './hooks/use-keyboard'
-import { debouncedSaveTabState, flushSaveTabState } from './lib/ipc'
+import { debouncedSaveTabState, flushSaveTabState, cancelPendingSave } from './lib/ipc'
 
 export default function App() {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
@@ -67,6 +67,8 @@ export default function App() {
         })
       }
 
+      // Cancel any pending debounced save before resetting
+      cancelPendingSave()
       useTabStore.getState().reset()
 
       setWorkspacePath(folderPath)
