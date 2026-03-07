@@ -6,6 +6,7 @@ import { detectServiceFromUrl, slugify, createBookmarkContent } from '../../lib/
 const FILE_CARDS = [
   { label: 'Markdown', ext: '.md', icon: '📝', description: 'Create a new document' },
   { label: 'Spreadsheet', ext: '.csv', icon: '📊', description: 'Create a CSV file' },
+  { label: 'Canvas', ext: '.excalidraw', icon: '🎨', description: 'Create a drawing' },
   { label: 'Mermaid', ext: '.mmd', icon: '🔀', description: 'Create a diagram' }
 ]
 

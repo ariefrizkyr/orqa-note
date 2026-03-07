@@ -15,6 +15,7 @@ export function getContextMenuActions(
     onCreateFolder: (folderPath: string) => void
     onCreateBookmark: (folderPath: string) => void
     onCreateSpreadsheet: (folderPath: string) => void
+    onCreateCanvas: (folderPath: string) => void
     onRename: (node: FileNode) => void
   }
 ): ContextMenuAction[] {
@@ -33,6 +34,13 @@ export function getContextMenuActions(
       action: () => {
         const target = node.type === 'directory' ? node.path : parentDir
         callbacks.onCreateSpreadsheet(target)
+      }
+    },
+    {
+      label: 'New Canvas',
+      action: () => {
+        const target = node.type === 'directory' ? node.path : parentDir
+        callbacks.onCreateCanvas(target)
       }
     },
     {

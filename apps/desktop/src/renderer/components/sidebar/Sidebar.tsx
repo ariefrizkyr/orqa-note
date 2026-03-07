@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { FileTree } from './FileTree'
+import type { InlineCreateState } from './FileTree'
 import { BookmarkFormModal } from './BookmarkFormModal'
 import { getContextMenuActions } from './ContextMenu'
 import { useWorkspaceStore } from '../../stores/workspace-store'
@@ -22,7 +23,7 @@ export function Sidebar() {
     node: FileNode
   } | null>(null)
 
-  const [inlineCreate, setInlineCreate] = useState<{ path: string; type: 'file' | 'folder' } | null>(null)
+  const [inlineCreate, setInlineCreate] = useState<InlineCreateState | null>(null)
 
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
@@ -127,6 +128,14 @@ export function Sidebar() {
     [expandFolder]
   )
 
+  const handleStartCreateCanvas = useCallback(
+    async (folderPath: string) => {
+      await expandFolder(folderPath)
+      setInlineCreate({ path: folderPath, type: 'file', defaultValue: 'Untitled.excalidraw' })
+    },
+    [expandFolder]
+  )
+
   const [bookmarkFolderPath, setBookmarkFolderPath] = useState<string | null>(null)
 
   const handleStartCreateBookmark = useCallback((folderPath: string) => {
@@ -198,7 +207,7 @@ export function Sidebar() {
           className="fixed z-50 min-w-[180px] rounded-md border border-neutral-600 bg-neutral-800 py-1 shadow-xl"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          {getContextMenuActions(contextMenu.node, { onRefresh: handleRefresh, onCreateFile: handleStartCreateFile, onCreateFolder: handleStartCreateFolder, onCreateBookmark: handleStartCreateBookmark, onCreateSpreadsheet: handleStartCreateSpreadsheet, onRename: handleStartRename }).map(
+          {getContextMenuActions(contextMenu.node, { onRefresh: handleRefresh, onCreateFile: handleStartCreateFile, onCreateFolder: handleStartCreateFolder, onCreateBookmark: handleStartCreateBookmark, onCreateSpreadsheet: handleStartCreateSpreadsheet, onCreateCanvas: handleStartCreateCanvas, onRename: handleStartRename }).map(
             (action, i) => (
               <div key={action.label}>
                 {action.separator && i > 0 && (
