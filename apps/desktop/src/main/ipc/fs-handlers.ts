@@ -171,6 +171,16 @@ export function registerFsHandlers(): void {
     }
   })
 
+  ipcMain.handle('fs:writeBinaryFile', async (_event, filePath: string, data: Uint8Array) => {
+    try {
+      assertWithinWorkspace(filePath, 'writeBinaryFile')
+      await writeFile(filePath, Buffer.from(data))
+    } catch (err) {
+      log.error('writeBinaryFile', err)
+      throw err
+    }
+  })
+
   ipcMain.handle('fs:createDir', async (_event, dirPath: string, name: string) => {
     try {
       const fullPath = join(dirPath, name)

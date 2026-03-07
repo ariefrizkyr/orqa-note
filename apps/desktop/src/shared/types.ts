@@ -47,6 +47,7 @@ export interface ElectronAPI {
     readBookmark: (filePath: string) => Promise<BookmarkFile>
     createFile: (dirPath: string, name: string, content?: string) => Promise<string>
     writeFile: (filePath: string, content: string) => Promise<void>
+    writeBinaryFile: (filePath: string, data: Uint8Array) => Promise<void>
     createDir: (dirPath: string, name: string) => Promise<string>
     rename: (oldPath: string, newPath: string) => Promise<void>
     trash: (filePath: string) => Promise<void>

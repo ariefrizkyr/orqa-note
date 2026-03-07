@@ -9,6 +9,7 @@ const api: ElectronAPI = {
     readBookmark: (filePath: string) => ipcRenderer.invoke('fs:readBookmark', filePath),
     createFile: (dirPath: string, name: string, content?: string) => ipcRenderer.invoke('fs:createFile', dirPath, name, content),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs:writeFile', filePath, content),
+    writeBinaryFile: (filePath: string, data: Uint8Array) => ipcRenderer.invoke('fs:writeBinaryFile', filePath, data),
     createDir: (dirPath: string, name: string) => ipcRenderer.invoke('fs:createDir', dirPath, name),
     rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
     trash: (filePath: string) => ipcRenderer.invoke('fs:trash', filePath),
