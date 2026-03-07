@@ -69,22 +69,11 @@ export function useFsEvents(): void {
         if (consumeSelfWritten(event.path)) return
 
         const tab = useTabStore.getState().findTabByFilePath(event.path)
-        if (tab) {
-          if (tab.isDirty) {
-            // File changed externally while user has unsaved changes — ask
-            const reload = window.confirm(
-              'File changed externally. Reload and lose your changes, or keep your version?\n\nClick OK to reload, Cancel to keep your version.',
-            )
-            if (reload) {
-              useTabStore.getState().clearDirty(tab.id)
-              // Force re-render by bumping label (triggers content reload)
-              useTabStore.getState().updateTab(tab.id, { label: tab.label })
-            }
-          } else {
-            // Not dirty — silently reload
-            useTabStore.getState().updateTab(tab.id, { label: tab.label })
-          }
+        if (tab && !tab.isDirty) {
+          // Not dirty — silently reload
+          useTabStore.getState().updateTab(tab.id, { label: tab.label })
         }
+        // If dirty, keep the user's version silently
       }
     })
 

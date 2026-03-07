@@ -13,11 +13,9 @@ import { WebviewToolbar } from '../webview/WebviewToolbar'
 function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
   const [content, setContent] = useState<string | null>(null)
   const [error, setError] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'saved' | null>(null)
   const editorRef = useRef<OrqaEditorHandle>(null)
   const { markDirty, clearDirty } = useTabStore()
   const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setContent(null)
@@ -32,9 +30,6 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
       markSelfWritten(filePath)
       await window.electronAPI.fs.writeFile(filePath, markdown)
       clearDirty(tabId)
-      setSaveStatus('saved')
-      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
-      fadeTimerRef.current = setTimeout(() => setSaveStatus(null), 2000)
     } catch {
       // Save failed silently — user will notice dirty indicator persists
     }
@@ -81,14 +76,6 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
           onLinkClick={handleLinkClick}
         />
       </div>
-      {saveStatus === 'saved' && (
-        <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-neutral-500">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Auto-saved
-        </div>
-      )}
     </div>
   )
 }
@@ -96,11 +83,9 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
 function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
   const [content, setContent] = useState<string | null>(null)
   const [error, setError] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'saved' | null>(null)
   const editorRef = useRef<CodeEditorHandle>(null)
   const { markDirty, clearDirty } = useTabStore()
   const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setContent(null)
@@ -115,9 +100,6 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
       markSelfWritten(filePath)
       await window.electronAPI.fs.writeFile(filePath, text)
       clearDirty(tabId)
-      setSaveStatus('saved')
-      if (fadeTimerRef.current) clearTimeout(fadeTimerRef.current)
-      fadeTimerRef.current = setTimeout(() => setSaveStatus(null), 2000)
     } catch {
       // Save failed silently — user will notice dirty indicator persists
     }
@@ -160,14 +142,6 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
           onChange={handleChange}
         />
       </div>
-      {saveStatus === 'saved' && (
-        <div className="flex items-center gap-1.5 px-3 py-1 text-xs text-neutral-500">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          Auto-saved
-        </div>
-      )}
     </div>
   )
 }
