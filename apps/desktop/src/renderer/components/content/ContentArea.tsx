@@ -6,6 +6,8 @@ import type { OrqaEditorHandle } from '@orqa-note/editor'
 import { CodeEditor, isBinaryExtension } from '@orqa-note/code-editor'
 import type { CodeEditorHandle } from '@orqa-note/code-editor'
 import { PdfViewer } from '@orqa-note/pdf-viewer'
+import { SpreadsheetEditor } from '@orqa-note/spreadsheet'
+import type { SpreadsheetEditorHandle } from '@orqa-note/spreadsheet'
 import { useFileEditor } from '../../hooks/use-file-editor'
 import { extname } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
@@ -92,6 +94,74 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
           ref={editorRef}
           initialContent={content}
           filePath={filePath}
+          onSave={handleSave}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
+  )
+}
+
+function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
+  const editorRef = useRef<SpreadsheetEditorHandle>(null)
+  const ext = extname(filePath)
+  const fileType = ext === 'csv' ? 'csv' as const : 'xlsx' as const
+  const [data, setData] = useState<Uint8Array | string | null>(null)
+  const [error, setError] = useState(false)
+  const [saveError, setSaveError] = useState(false)
+  const { markDirty, clearDirty } = useTabStore()
+  const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
+
+  useEffect(() => {
+    setData(null)
+    setError(false)
+    setSaveError(false)
+    if (fileType === 'csv') {
+      window.electronAPI.fs.readFile(filePath)
+        .then(setData)
+        .catch(() => setError(true))
+    } else {
+      window.electronAPI.fs.readBinaryFile(filePath)
+        .then((buf) => setData(new Uint8Array(buf)))
+        .catch(() => setError(true))
+    }
+  }, [filePath, fileType])
+
+  const handleChange = useCallback(() => {
+    markDirty(tabId)
+  }, [tabId, markDirty])
+
+  const handleSave = useCallback(async (saveData: Uint8Array | string) => {
+    try {
+      if (fileType === 'csv') {
+        await window.electronAPI.fs.writeFile(filePath, saveData as string)
+      } else {
+        await window.electronAPI.fs.writeBinaryFile(filePath, saveData as Uint8Array)
+      }
+      clearDirty(tabId)
+      setSaveError(false)
+    } catch {
+      setSaveError(true)
+    }
+  }, [filePath, fileType, tabId, clearDirty])
+
+  useAutoSave({
+    isDirty,
+    onSave: () => editorRef.current?.save(),
+    debounceMs: 2000,
+  })
+
+  if (error) return <ErrorState message="Failed to load spreadsheet" />
+  if (data === null) return <LoadingState />
+
+  return (
+    <div className="flex h-full flex-col overflow-hidden">
+      {saveError && <SaveErrorBanner onDismiss={() => setSaveError(false)} />}
+      <div className="min-h-0 flex-1">
+        <SpreadsheetEditor
+          ref={editorRef}
+          data={data}
+          fileType={fileType}
           onSave={handleSave}
           onChange={handleChange}
         />
@@ -201,6 +271,11 @@ export function ContentArea() {
   // PDF
   if (ext === 'pdf') {
     return <PdfFileViewer filePath={activeTab.filePath!} />
+  }
+
+  // Spreadsheet (xlsx, csv)
+  if (ext === 'xlsx' || ext === 'csv') {
+    return <SpreadsheetFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
   }
 
   // Binary files
