@@ -1,6 +1,6 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: .orqlnk bookmark file format
+### Requirement: .orqa bookmark file format
 Bookmarks SHALL be stored as `.orqlnk` JSON files on disk with the schema: `{ type: "bookmark", url: string, label: string, service: string }`. Valid service values are `docs`, `sheets`, `slides`, `figma`, and `other`.
 
 #### Scenario: Valid bookmark file

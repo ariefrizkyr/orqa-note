@@ -59,7 +59,7 @@ export function NewTabScreen() {
     if (!workspacePath || !bookmarkUrl || !bookmarkLabel) return
     const slug = slugify(bookmarkLabel)
     const content = createBookmarkContent(bookmarkUrl, bookmarkLabel, bookmarkService)
-    const filePath = await window.electronAPI.fs.createFile(workspacePath, `${slug}.orqa`, content)
+    const filePath = await window.electronAPI.fs.createFile(workspacePath, `${slug}.orqlnk`, content)
     openTab({
       type: 'bookmark',
       filePath,

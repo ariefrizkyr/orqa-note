@@ -9,7 +9,7 @@ export function getFileIcon(extension?: string): string {
     case 'mmd': return '🔀'
     case 'excalidraw': return '🎨'
     case 'drawio': return '📐'
-    case 'orqa': return '🔗'
+    case 'orqlnk': return '🔗'
     default: return '📄'
   }
 }

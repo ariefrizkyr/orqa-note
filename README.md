@@ -1,16 +1,19 @@
 # Orqa Note
 
-A desktop workspace for Product Managers — browse local files with markdown preview, manage documents in tabs, and embed external services (Google Docs, Sheets, Figma, etc.) all in one place.
+A desktop workspace for Product Managers — manage local files, write markdown, edit spreadsheets, draw on canvas, preview PDFs, and embed external services, all in one place.
 
 Built with Electron, React, and TypeScript.
 
 ## Features
 
+- **Markdown editor** with syntax highlighting and Mermaid diagram support
+- **Code editor** powered by Monaco for 100+ languages
+- **Spreadsheet editor** for CSV and XLSX files
+- **PDF viewer** for inline document viewing
+- **Canvas editor** with Excalidraw for drawings and diagrams
+- **Embedded web views** for external services (Google Docs, Sheets, Figma) via `.orqlnk` bookmark files
 - **Local file browser** with directory watching and fuzzy search
-- **Markdown preview** with GitHub Flavored Markdown and syntax highlighting
-- **Tabbed interface** for managing multiple documents
-- **Embedded web views** for external services via `.bookmark` files
-- **Workspace persistence** — tabs and state restored per workspace
+- **Tabbed interface** with workspace persistence
 - **Keyboard shortcuts** for fast navigation
 
 ## Tech Stack
@@ -43,6 +46,7 @@ pnpm dev
 | --- | --- |
 | `pnpm dev` | Start Electron dev mode with hot reload |
 | `pnpm build` | Production build |
+| `pnpm build:mac` | Build and package macOS DMG |
 | `pnpm typecheck` | Run TypeScript type checking |
 
 ## Project Structure
@@ -56,7 +60,13 @@ orqa-note/
 │           ├── preload/        # IPC bridge
 │           ├── renderer/       # React UI (components, stores, hooks)
 │           └── shared/         # Shared types
-├── packages/                   # Shared packages (workspace)
+├── packages/
+│   ├── editor/                 # Milkdown markdown editor
+│   ├── code-editor/            # Monaco code editor
+│   ├── spreadsheet/            # Univer Sheets (CSV/XLSX)
+│   ├── pdf-viewer/             # PDF.js viewer
+│   ├── excalidraw/             # Excalidraw canvas editor
+│   └── shared/                 # Shared utilities and hooks
 ├── openspec/                   # Product specifications
 ├── pnpm-workspace.yaml
 └── tsconfig.base.json
@@ -71,7 +81,7 @@ orqa-note/
 - `tab-store` — open tabs, active tab, recently closed
 - `ui-store` — sidebar width, search visibility
 
-**Bookmark files** (`.bookmark` JSON) open external URLs as embedded web views with isolated session storage per workspace.
+**Bookmark files** (`.orqlnk` JSON) open external URLs as embedded web views with isolated session storage per workspace.
 
 ## License
 

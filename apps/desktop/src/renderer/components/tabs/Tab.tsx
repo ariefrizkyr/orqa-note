@@ -22,7 +22,7 @@ function getTypeDotColor(tab: TabType): string {
     case 'md': return '#60A5FA'
     case 'csv': case 'xlsx': return '#34D399'
     case 'pdf': return '#F87171'
-    case 'orqa': return '#FBBF24'
+    case 'orqlnk': return '#FBBF24'
     default: return '#9CA3AF'
   }
 }

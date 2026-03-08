@@ -147,7 +147,7 @@ export function Sidebar() {
       if (!bookmarkFolderPath) return
       const slug = slugify(data.label)
       const content = createBookmarkContent(data.url, data.label, data.service)
-      const filePath = await window.electronAPI.fs.createFile(bookmarkFolderPath, `${slug}.orqa`, content)
+      const filePath = await window.electronAPI.fs.createFile(bookmarkFolderPath, `${slug}.orqlnk`, content)
       // Refresh folder children
       const children = await window.electronAPI.fs.readDir(bookmarkFolderPath)
       useWorkspaceStore.getState().updateNodeChildren(bookmarkFolderPath, children)

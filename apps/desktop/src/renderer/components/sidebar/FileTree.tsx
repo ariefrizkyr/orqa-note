@@ -30,10 +30,10 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
   const [invalidBookmarks, setInvalidBookmarks] = useState<Set<string>>(new Set())
   const [draggedNode, setDraggedNode] = useState<FileNode | null>(null)
 
-  // Load bookmark metadata for .orqa files
+  // Load bookmark metadata for .orqlnk files
   useEffect(() => {
-    const orqaFiles = flattenNodes(rootNodes).filter((n) => n.extension === 'orqa')
-    for (const file of orqaFiles) {
+    const orqlnkFiles = flattenNodes(rootNodes).filter((n) => n.extension === 'orqlnk')
+    for (const file of orqlnkFiles) {
       if (!bookmarkCache[file.path] && !invalidBookmarks.has(file.path)) {
         window.electronAPI.fs.readBookmark(file.path).then((bm) => {
           setBookmarkCache((prev) => ({ ...prev, [file.path]: bm }))
@@ -59,7 +59,7 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
 
   const handleFileClick = useCallback(
     async (node: FileNode) => {
-      if (node.extension === 'orqa') {
+      if (node.extension === 'orqlnk') {
         if (invalidBookmarks.has(node.path)) {
           openTab({
             type: 'file',
@@ -198,7 +198,7 @@ function renderNodes(
           onDrop={onDrop}
           onRenameSubmit={onRenameSubmit}
           onRenameCancel={onRenameCancel}
-          bookmark={node.extension === 'orqa' ? bookmarkCache[node.path] : null}
+          bookmark={node.extension === 'orqlnk' ? bookmarkCache[node.path] : null}
           isInvalidBookmark={invalidBookmarks.has(node.path)}
         />
         {isExpanded && node.children && (
