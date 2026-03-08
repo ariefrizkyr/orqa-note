@@ -260,7 +260,7 @@ export function ContentArea() {
   if (!activeTab) {
     return (
       <div className="flex h-full items-center justify-center text-neutral-500">
-        <p className="text-sm">Open a file from the sidebar or press + for a new tab</p>
+        <p className="text-sm">Open a file from the sidebar</p>
       </div>
     )
   }
