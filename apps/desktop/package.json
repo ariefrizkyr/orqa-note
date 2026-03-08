@@ -1,6 +1,8 @@
 {
   "name": "@orqa-note/desktop",
   "version": "0.1.0",
+  "description": "Orqa Note - VS Code for Product Managers",
+  "author": "Arief R Ramadhan",
   "productName": "Orqa Note",
   "private": true,
   "main": "./out/main/index.js",
