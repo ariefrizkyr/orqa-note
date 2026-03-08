@@ -27,6 +27,8 @@ jobs:
 
       - name: Build all packages
         run: pnpm --filter @orqa-note/desktop... build
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Build and publish Electron app
         run: pnpm --filter @orqa-note/desktop exec electron-builder --mac --publish always
