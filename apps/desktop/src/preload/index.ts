@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FSEvent, WorkspaceState } from '../shared/types'
+import type { ElectronAPI, FSEvent, UpdateStatus, WorkspaceState } from '../shared/types'
 
 const api: ElectronAPI = {
   fs: {
@@ -46,6 +46,16 @@ const api: ElectronAPI = {
       const handler = (_event: Electron.IpcRendererEvent, fsEvent: FSEvent) => callback(fsEvent)
       ipcRenderer.on('fsWatch:event', handler)
       return () => ipcRenderer.removeListener('fsWatch:event', handler)
+    }
+  },
+  updater: {
+    check: () => ipcRenderer.invoke('updater:check'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    onStatus: (callback: (status: UpdateStatus) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => callback(status)
+      ipcRenderer.on('updater:status', handler)
+      return () => ipcRenderer.removeListener('updater:status', handler)
     }
   }
 }

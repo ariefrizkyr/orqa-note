@@ -3,9 +3,11 @@ import { registerFsHandlers } from './ipc/fs-handlers'
 import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerTabHandlers } from './ipc/tab-handlers'
 import { registerWebviewHandlers } from './ipc/webview-handlers'
+import { registerUpdaterHandlers } from './ipc/updater-handlers'
 import { startWatching, stopWatching, stopAllWatching, updateWatchedPaths } from './services/fs-watcher'
 import { createWindow } from './services/window-manager'
 import { buildAppMenu } from './services/app-menu'
+import { scheduleUpdateCheck } from './services/auto-updater'
 
 app.setName('Orqa')
 
@@ -14,6 +16,7 @@ registerFsHandlers()
 registerWorkspaceHandlers()
 registerTabHandlers()
 registerWebviewHandlers()
+registerUpdaterHandlers()
 
 // FS watch IPC — per-window watchers
 ipcMain.on('fsWatch:watch', (event, rootPath: string) => {
@@ -40,6 +43,7 @@ ipcMain.on('fsWatch:updatePaths', (event, paths: string[]) => {
 app.whenReady().then(() => {
   buildAppMenu()
   createWindow()
+  scheduleUpdateCheck()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

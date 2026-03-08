@@ -11,6 +11,9 @@ mac:
     - target: dmg
       arch:
         - arm64
+    - target: zip
+      arch:
+        - arm64
   artifactName: "${productName}-${version}-${arch}.${ext}"
   hardenedRuntime: true
   gatekeeperAssess: false
@@ -18,6 +21,10 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   notarize:
     teamId: ${env.APPLE_TEAM_ID}
+publish:
+  provider: github
+  owner: ariefrizkyr
+  repo: orqa-note
 dmg:
   writeUpdateInfo: false
   contents:

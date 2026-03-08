@@ -5,6 +5,7 @@ import { TabBar } from './components/tabs/TabBar'
 import { ContentArea } from './components/content/ContentArea'
 import { FuzzySearch } from './components/search/FuzzySearch'
 import { StatusBar } from './components/statusbar/StatusBar'
+import { UpdateToast } from './components/update/UpdateToast'
 import { useWorkspaceStore } from './stores/workspace-store'
 import { useTabStore } from './stores/tab-store'
 import { useUIStore } from './stores/ui-store'
@@ -104,6 +105,7 @@ export default function App() {
           onOpenFolder={handleOpenFolder}
           onOpenRecent={(path) => openWorkspace(path)}
         />
+        <UpdateToast />
       </div>
     )
   }
@@ -138,6 +140,7 @@ export default function App() {
       </div>
       <StatusBar />
       <FuzzySearch />
+      <UpdateToast />
     </div>
   )
 }

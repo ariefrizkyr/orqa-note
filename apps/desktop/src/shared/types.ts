@@ -39,6 +39,15 @@ export interface FSEvent {
   path: string
 }
 
+export type UpdateStatusType = 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+
+export interface UpdateStatus {
+  status: UpdateStatusType
+  version?: string
+  progress?: number
+  error?: string
+}
+
 export interface ElectronAPI {
   fs: {
     readDir: (dirPath: string) => Promise<FileNode[]>
@@ -80,5 +89,11 @@ export interface ElectronAPI {
     unwatch: () => void
     updatePaths: (paths: string[]) => void
     onEvent: (callback: (event: FSEvent) => void) => () => void
+  }
+  updater: {
+    check: () => Promise<void>
+    download: () => Promise<void>
+    install: () => Promise<void>
+    onStatus: (callback: (status: UpdateStatus) => void) => () => void
   }
 }

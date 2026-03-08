@@ -1,10 +1,30 @@
-import { Menu, dialog, BrowserWindow } from 'electron'
+import { app, Menu, dialog, BrowserWindow } from 'electron'
 import { addRecentWorkspace } from './state-persistence'
 import { createWindow, getWindowWorkspacePath } from './window-manager'
+import { checkForUpdates } from './auto-updater'
 
 export function buildAppMenu(): void {
+  const appName = app.name
+
   const template: Electron.MenuItemConstructorOptions[] = [
-    { role: 'appMenu' },
+    {
+      label: appName,
+      submenu: [
+        { role: 'about' },
+        {
+          label: 'Check for Updates...',
+          click: () => checkForUpdates()
+        },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
     {
       label: 'File',
       submenu: [
