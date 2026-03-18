@@ -4,7 +4,7 @@ import {
   setRecentWorkspaces,
   addRecentWorkspace
 } from '../services/state-persistence'
-import { createWindow, getWindowWorkspacePath } from '../services/window-manager'
+import { getWindowWorkspacePath } from '../services/window-manager'
 import { addWorkspaceRoot } from './fs-handlers'
 
 export function registerWorkspaceHandlers(): void {
@@ -22,15 +22,7 @@ export function registerWorkspaceHandlers(): void {
     await addRecentWorkspace(folderPath)
     addWorkspaceRoot(folderPath)
 
-    // If current window has no workspace, open in same window
-    const currentWorkspace = getWindowWorkspacePath(win.id)
-    if (!currentWorkspace) {
-      return folderPath
-    }
-
-    // Otherwise open in a new window
-    createWindow(folderPath)
-    return null
+    return folderPath
   })
 
   ipcMain.handle('workspace:getInitialPath', (event) => {
