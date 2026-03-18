@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useUIStore } from '../stores/ui-store'
 import { useTabStore } from '../stores/tab-store'
+import { useToastStore } from '../stores/toast-store'
 
 export function useKeyboard(): void {
   useEffect(() => {
@@ -37,6 +38,23 @@ export function useKeyboard(): void {
       if (meta && e.shiftKey && e.key === 't') {
         e.preventDefault()
         useTabStore.getState().reopenLastClosed()
+        return
+      }
+
+      // Cmd+Shift+C — copy active tab path/URL
+      if (meta && e.shiftKey && e.key === 'c') {
+        e.preventDefault()
+        const { tabs, activeTabId } = useTabStore.getState()
+        const tab = tabs.find((t) => t.id === activeTabId)
+        if (!tab) return
+
+        if (tab.type === 'file' && tab.filePath) {
+          navigator.clipboard.writeText(tab.filePath)
+          useToastStore.getState().showToast({ message: 'Path copied', placement: 'top-right' })
+        } else if (tab.type === 'bookmark' && tab.bookmarkUrl) {
+          navigator.clipboard.writeText(tab.bookmarkUrl)
+          useToastStore.getState().showToast({ message: 'URL copied', placement: 'top-right' })
+        }
         return
       }
 

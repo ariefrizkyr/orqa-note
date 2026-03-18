@@ -6,6 +6,7 @@ import { ContentArea } from './components/content/ContentArea'
 import { FuzzySearch } from './components/search/FuzzySearch'
 import { StatusBar } from './components/statusbar/StatusBar'
 import { UpdateToast } from './components/update/UpdateToast'
+import { Toast } from './components/toast/Toast'
 import { useWorkspaceStore } from './stores/workspace-store'
 import { useTabStore } from './stores/tab-store'
 import { useUIStore } from './stores/ui-store'
@@ -106,6 +107,7 @@ export default function App() {
           onOpenRecent={(path) => openWorkspace(path)}
         />
         <UpdateToast />
+        <Toast />
       </div>
     )
   }
@@ -141,6 +143,7 @@ export default function App() {
       <StatusBar />
       <FuzzySearch />
       <UpdateToast />
+      <Toast />
     </div>
   )
 }

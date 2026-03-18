@@ -153,10 +153,20 @@ export function getContextMenuActions(
     separator: true
   })
 
+  const isBookmark = node.extension === 'orqlnk'
   actions.push({
-    label: 'Copy Path',
-    action: () => {
-      window.electronAPI.fs.copyPath(node.path)
+    label: isBookmark ? 'Copy URL' : 'Copy Path',
+    action: async () => {
+      if (isBookmark) {
+        try {
+          const bookmark = await window.electronAPI.fs.readBookmark(node.path)
+          navigator.clipboard.writeText(bookmark.url)
+        } catch {
+          navigator.clipboard.writeText(node.path)
+        }
+      } else {
+        window.electronAPI.fs.copyPath(node.path)
+      }
     }
   })
 
