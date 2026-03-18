@@ -13,6 +13,7 @@ const api: ElectronAPI = {
     createDir: (dirPath: string, name: string) => ipcRenderer.invoke('fs:createDir', dirPath, name),
     rename: (oldPath: string, newPath: string) => ipcRenderer.invoke('fs:rename', oldPath, newPath),
     trash: (filePath: string) => ipcRenderer.invoke('fs:trash', filePath),
+    copy: (srcPath: string, destPath: string) => ipcRenderer.invoke('fs:copy', srcPath, destPath),
     move: (srcPath: string, destPath: string) => ipcRenderer.invoke('fs:move', srcPath, destPath),
     revealInFinder: (filePath: string) => ipcRenderer.send('fs:revealInFinder', filePath),
     copyPath: (filePath: string) => ipcRenderer.send('fs:copyPath', filePath),

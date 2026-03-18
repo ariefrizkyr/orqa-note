@@ -60,6 +60,7 @@ export interface ElectronAPI {
     createDir: (dirPath: string, name: string) => Promise<string>
     rename: (oldPath: string, newPath: string) => Promise<void>
     trash: (filePath: string) => Promise<void>
+    copy: (srcPath: string, destPath: string) => Promise<void>
     move: (srcPath: string, destPath: string) => Promise<void>
     revealInFinder: (filePath: string) => void
     copyPath: (filePath: string) => void

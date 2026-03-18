@@ -99,6 +99,7 @@ export function FileTreeNode({
     (e: React.DragEvent) => {
       setIsDragOver(false)
       if (node.type === 'directory') {
+        e.stopPropagation()
         onDrop(e, node)
       }
     },
