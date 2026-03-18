@@ -3,7 +3,7 @@ import { FileTreeNode } from './FileTreeNode'
 import { InlineFileInput } from './InlineFileInput'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
-import { getFileIcon, extname as getExt } from '../../lib/file-utils'
+import { getFileIcon, extname as getExt, dirname } from '../../lib/file-utils'
 import { createEmptyXlsxBytes } from '@orqa-note/spreadsheet'
 import type { FileNode, BookmarkFile } from '../../../shared/types'
 
@@ -15,20 +15,23 @@ export interface InlineCreateState {
 
 interface FileTreeProps {
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void
+  onEmptySpaceContextMenu: (e: React.MouseEvent) => void
   inlineCreate: InlineCreateState | null
   onCancelInlineCreate: () => void
   renamingPath: string | null
   onRenameSubmit: (node: FileNode, newName: string) => void
   onRenameCancel: () => void
+  workspacePath: string
 }
 
-export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, renamingPath, onRenameSubmit, onRenameCancel }: FileTreeProps) {
+export function FileTree({ onContextMenu, onEmptySpaceContextMenu, inlineCreate, onCancelInlineCreate, renamingPath, onRenameSubmit, onRenameCancel, workspacePath }: FileTreeProps) {
   const { rootNodes, expandedPaths, toggleExpanded, updateNodeChildren } =
     useWorkspaceStore()
   const openTab = useTabStore((s) => s.openTab)
   const [bookmarkCache, setBookmarkCache] = useState<Record<string, BookmarkFile>>({})
   const [invalidBookmarks, setInvalidBookmarks] = useState<Set<string>>(new Set())
   const [draggedNode, setDraggedNode] = useState<FileNode | null>(null)
+  const [isDragOverRoot, setIsDragOverRoot] = useState(false)
 
   // Load bookmark metadata for .orqlnk files
   useEffect(() => {
@@ -120,6 +123,57 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
     [draggedNode]
   )
 
+  // Container-level drop handler for drag-to-root
+  const handleContainerDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (draggedNode) {
+        e.preventDefault()
+        setIsDragOverRoot(true)
+      }
+    },
+    [draggedNode]
+  )
+
+  const handleContainerDragLeave = useCallback((e: React.DragEvent) => {
+    const container = e.currentTarget as HTMLElement
+    if (!container.contains(e.relatedTarget as Node)) {
+      setIsDragOverRoot(false)
+    }
+  }, [])
+
+  const handleContainerDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragOverRoot(false)
+      if (!draggedNode) return
+
+      // No-op if already at root
+      if (dirname(draggedNode.path) === workspacePath) {
+        setDraggedNode(null)
+        return
+      }
+
+      try {
+        await window.electronAPI.fs.move(draggedNode.path, workspacePath)
+      } catch (err) {
+        console.error('Move to root failed:', err)
+      }
+      setDraggedNode(null)
+    },
+    [draggedNode, workspacePath]
+  )
+
+  // Empty-space context menu handler — only fires when clicking the container itself
+  const handleContainerContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      // Only trigger if the click target is the container div itself
+      if (e.target === e.currentTarget) {
+        onEmptySpaceContextMenu(e)
+      }
+    },
+    [onEmptySpaceContextMenu]
+  )
+
   const handleInlineCreateSubmit = useCallback(
     async (name: string) => {
       if (!inlineCreate) return
@@ -137,8 +191,13 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
           }
         }
         // Refresh the folder children
-        const children = await window.electronAPI.fs.readDir(folderPath)
-        updateNodeChildren(folderPath, children)
+        if (folderPath === workspacePath) {
+          const nodes = await window.electronAPI.fs.readDir(workspacePath)
+          useWorkspaceStore.getState().setRootNodes(nodes)
+        } else {
+          const children = await window.electronAPI.fs.readDir(folderPath)
+          updateNodeChildren(folderPath, children)
+        }
         // Open the new file as a tab (only for files)
         if (createType === 'file') {
           const ext = getExt(name)
@@ -154,12 +213,29 @@ export function FileTree({ onContextMenu, inlineCreate, onCancelInlineCreate, re
       }
       onCancelInlineCreate()
     },
-    [inlineCreate, updateNodeChildren, openTab, onCancelInlineCreate]
+    [inlineCreate, updateNodeChildren, openTab, onCancelInlineCreate, workspacePath]
   )
 
+  const isRootInlineCreate = inlineCreate?.path === workspacePath
+
   return (
-    <div className="flex-1 overflow-y-auto py-1">
-      {renderNodes(rootNodes, 0, expandedPaths, handleToggle, handleFileClick, onContextMenu, handleDragStart, handleDrop, bookmarkCache, invalidBookmarks, inlineCreate, handleInlineCreateSubmit, onCancelInlineCreate, renamingPath, onRenameSubmit, onRenameCancel)}
+    <div
+      className={`flex-1 overflow-y-auto py-1 ${isDragOverRoot ? 'bg-neutral-800/50' : ''}`}
+      onContextMenu={handleContainerContextMenu}
+      onDragOver={handleContainerDragOver}
+      onDragLeave={handleContainerDragLeave}
+      onDrop={handleContainerDrop}
+    >
+      {renderNodes(rootNodes, 0, expandedPaths, handleToggle, handleFileClick, onContextMenu, handleDragStart, handleDrop, bookmarkCache, invalidBookmarks, inlineCreate, handleInlineCreateSubmit, onCancelInlineCreate, renamingPath, onRenameSubmit, onRenameCancel, workspacePath)}
+      {isRootInlineCreate && (
+        <InlineFileInput
+          depth={0}
+          type={inlineCreate.type}
+          defaultValue={inlineCreate.defaultValue}
+          onSubmit={handleInlineCreateSubmit}
+          onCancel={onCancelInlineCreate}
+        />
+      )}
     </div>
   )
 }
@@ -180,10 +256,13 @@ function renderNodes(
   onInlineCreateCancel: () => void,
   renamingPath: string | null,
   onRenameSubmit: (node: FileNode, newName: string) => void,
-  onRenameCancel: () => void
+  onRenameCancel: () => void,
+  workspacePath: string
 ): React.ReactNode[] {
   return nodes.map((node) => {
     const isExpanded = expandedPaths.has(node.path)
+    // Skip rendering inline input for root-level (handled in FileTree component)
+    const showInlineCreate = inlineCreate?.path === node.path && node.path !== workspacePath
     return (
       <div key={node.path}>
         <FileTreeNode
@@ -202,9 +281,9 @@ function renderNodes(
           isInvalidBookmark={invalidBookmarks.has(node.path)}
         />
         {isExpanded && node.children && (
-          renderNodes(node.children, depth + 1, expandedPaths, onToggle, onFileClick, onContextMenu, onDragStart, onDrop, bookmarkCache, invalidBookmarks, inlineCreate, onInlineCreateSubmit, onInlineCreateCancel, renamingPath, onRenameSubmit, onRenameCancel)
+          renderNodes(node.children, depth + 1, expandedPaths, onToggle, onFileClick, onContextMenu, onDragStart, onDrop, bookmarkCache, invalidBookmarks, inlineCreate, onInlineCreateSubmit, onInlineCreateCancel, renamingPath, onRenameSubmit, onRenameCancel, workspacePath)
         )}
-        {inlineCreate?.path === node.path && (
+        {showInlineCreate && (
           <InlineFileInput
             depth={depth + 1}
             type={inlineCreate.type}

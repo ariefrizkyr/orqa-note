@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { FileTree } from './FileTree'
 import type { InlineCreateState } from './FileTree'
 import { BookmarkFormModal } from './BookmarkFormModal'
 import { getContextMenuActions } from './ContextMenu'
+import type { ClipboardState } from './ContextMenu'
 import { useWorkspaceStore } from '../../stores/workspace-store'
 import { useTabStore } from '../../stores/tab-store'
 import { useUIStore } from '../../stores/ui-store'
@@ -20,10 +21,13 @@ export function Sidebar() {
   const [contextMenu, setContextMenu] = useState<{
     x: number
     y: number
-    node: FileNode
+    node: FileNode | null
   } | null>(null)
 
   const [inlineCreate, setInlineCreate] = useState<InlineCreateState | null>(null)
+  const [clipboard, setClipboard] = useState<ClipboardState | null>(null)
+  const [menuPos, setMenuPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null)
 
@@ -61,6 +65,11 @@ export function Sidebar() {
     setContextMenu({ x: e.clientX, y: e.clientY, node })
   }, [])
 
+  const handleEmptySpaceContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenu({ x: e.clientX, y: e.clientY, node: null })
+  }, [])
+
   const handleRefresh = useCallback(async () => {
     if (!workspacePath) return
     const nodes = await window.electronAPI.fs.readDir(workspacePath)
@@ -78,18 +87,22 @@ export function Sidebar() {
 
   const handleStartCreateFile = useCallback(
     async (folderPath: string) => {
-      await expandFolder(folderPath)
+      if (folderPath !== workspacePath) {
+        await expandFolder(folderPath)
+      }
       setInlineCreate({ path: folderPath, type: 'file' })
     },
-    [expandFolder]
+    [expandFolder, workspacePath]
   )
 
   const handleStartCreateFolder = useCallback(
     async (folderPath: string) => {
-      await expandFolder(folderPath)
+      if (folderPath !== workspacePath) {
+        await expandFolder(folderPath)
+      }
       setInlineCreate({ path: folderPath, type: 'folder' })
     },
-    [expandFolder]
+    [expandFolder, workspacePath]
   )
 
   const handleCancelInlineCreate = useCallback(() => {
@@ -122,18 +135,22 @@ export function Sidebar() {
 
   const handleStartCreateSpreadsheet = useCallback(
     async (folderPath: string) => {
-      await expandFolder(folderPath)
+      if (folderPath !== workspacePath) {
+        await expandFolder(folderPath)
+      }
       setInlineCreate({ path: folderPath, type: 'file', defaultValue: 'Untitled.xlsx' })
     },
-    [expandFolder]
+    [expandFolder, workspacePath]
   )
 
   const handleStartCreateCanvas = useCallback(
     async (folderPath: string) => {
-      await expandFolder(folderPath)
+      if (folderPath !== workspacePath) {
+        await expandFolder(folderPath)
+      }
       setInlineCreate({ path: folderPath, type: 'file', defaultValue: 'Untitled.excalidraw' })
     },
-    [expandFolder]
+    [expandFolder, workspacePath]
   )
 
   const [bookmarkFolderPath, setBookmarkFolderPath] = useState<string | null>(null)
@@ -149,8 +166,13 @@ export function Sidebar() {
       const content = createBookmarkContent(data.url, data.label, data.service)
       const filePath = await window.electronAPI.fs.createFile(bookmarkFolderPath, `${slug}.orqlnk`, content)
       // Refresh folder children
-      const children = await window.electronAPI.fs.readDir(bookmarkFolderPath)
-      useWorkspaceStore.getState().updateNodeChildren(bookmarkFolderPath, children)
+      if (bookmarkFolderPath === workspacePath) {
+        const nodes = await window.electronAPI.fs.readDir(workspacePath)
+        useWorkspaceStore.getState().setRootNodes(nodes)
+      } else {
+        const children = await window.electronAPI.fs.readDir(bookmarkFolderPath)
+        useWorkspaceStore.getState().updateNodeChildren(bookmarkFolderPath, children)
+      }
       openTab({
         type: 'bookmark',
         filePath,
@@ -166,6 +188,62 @@ export function Sidebar() {
   const handleCancelBookmark = useCallback(() => {
     setBookmarkFolderPath(null)
   }, [])
+
+  // Clipboard callbacks
+  const handleCopy = useCallback((node: FileNode) => {
+    setClipboard({ sourcePath: node.path, operation: 'copy' })
+  }, [])
+
+  const handleCut = useCallback((node: FileNode) => {
+    setClipboard({ sourcePath: node.path, operation: 'cut' })
+  }, [])
+
+  const handlePaste = useCallback(
+    async (targetDir: string) => {
+      if (!clipboard) return
+      try {
+        if (clipboard.operation === 'copy') {
+          await window.electronAPI.fs.copy(clipboard.sourcePath, targetDir)
+        } else {
+          await window.electronAPI.fs.move(clipboard.sourcePath, targetDir)
+          setClipboard(null)
+        }
+        // Refresh tree so the pasted item appears immediately
+        if (targetDir === workspacePath) {
+          const nodes = await window.electronAPI.fs.readDir(workspacePath)
+          useWorkspaceStore.getState().setRootNodes(nodes)
+        } else {
+          const children = await window.electronAPI.fs.readDir(targetDir)
+          useWorkspaceStore.getState().updateNodeChildren(targetDir, children)
+        }
+      } catch (err) {
+        console.error('Paste failed:', err)
+      }
+    },
+    [clipboard, workspacePath]
+  )
+
+  const handleCollapseAll = useCallback(() => {
+    useWorkspaceStore.getState().collapseAll()
+  }, [])
+
+  // Clamp context menu position to stay within viewport
+  useLayoutEffect(() => {
+    if (!contextMenu) return
+    const el = contextMenuRef.current
+    if (!el) {
+      setMenuPos({ x: contextMenu.x, y: contextMenu.y })
+      return
+    }
+    const rect = el.getBoundingClientRect()
+    const x = contextMenu.x + rect.width > window.innerWidth
+      ? window.innerWidth - rect.width - 4
+      : contextMenu.x
+    const y = contextMenu.y + rect.height > window.innerHeight
+      ? window.innerHeight - rect.height - 4
+      : contextMenu.y
+    setMenuPos({ x: Math.max(0, x), y: Math.max(0, y) })
+  }, [contextMenu])
 
   // Close context menu on click outside
   useEffect(() => {
@@ -186,11 +264,13 @@ export function Sidebar() {
         <WorkspaceHeader workspacePath={workspacePath} />
         <FileTree
           onContextMenu={handleContextMenu}
+          onEmptySpaceContextMenu={handleEmptySpaceContextMenu}
           inlineCreate={inlineCreate}
           onCancelInlineCreate={handleCancelInlineCreate}
           renamingPath={renamingPath}
           onRenameSubmit={handleRenameSubmit}
           onRenameCancel={handleRenameCancel}
+          workspacePath={workspacePath}
         />
       </div>
 
@@ -204,10 +284,25 @@ export function Sidebar() {
       {/* Context menu */}
       {contextMenu && (
         <div
+          ref={contextMenuRef}
           className="fixed z-50 min-w-[180px] rounded-md border border-neutral-600 bg-neutral-800 py-1 shadow-xl"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
+          style={{ left: menuPos.x, top: menuPos.y }}
         >
-          {getContextMenuActions(contextMenu.node, { onRefresh: handleRefresh, onCreateFile: handleStartCreateFile, onCreateFolder: handleStartCreateFolder, onCreateBookmark: handleStartCreateBookmark, onCreateSpreadsheet: handleStartCreateSpreadsheet, onCreateCanvas: handleStartCreateCanvas, onRename: handleStartRename }).map(
+          {getContextMenuActions(contextMenu.node, {
+            onRefresh: handleRefresh,
+            onCreateFile: handleStartCreateFile,
+            onCreateFolder: handleStartCreateFolder,
+            onCreateBookmark: handleStartCreateBookmark,
+            onCreateSpreadsheet: handleStartCreateSpreadsheet,
+            onCreateCanvas: handleStartCreateCanvas,
+            onRename: handleStartRename,
+            onCopy: handleCopy,
+            onCut: handleCut,
+            onPaste: handlePaste,
+            onCollapseAll: handleCollapseAll,
+            clipboard,
+            workspacePath
+          }).map(
             (action, i) => (
               <div key={action.label}>
                 {action.separator && i > 0 && (

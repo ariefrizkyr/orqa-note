@@ -1,5 +1,5 @@
 import { ipcMain, shell, clipboard, dialog, BrowserWindow } from 'electron'
-import { readdir, stat, readFile, writeFile, mkdir, rename } from 'fs/promises'
+import { readdir, stat, readFile, writeFile, mkdir, rename, cp } from 'fs/promises'
 import { join, extname, basename, resolve, relative } from 'path'
 import type { FileNode, BookmarkFile } from '../../shared/types'
 
@@ -210,6 +210,19 @@ export function registerFsHandlers(): void {
       await shell.trashItem(filePath)
     } catch (err) {
       log.error('trash', err)
+      throw err
+    }
+  })
+
+  ipcMain.handle('fs:copy', async (_event, srcPath: string, destPath: string) => {
+    try {
+      assertWithinWorkspace(srcPath, 'copy')
+      assertWithinWorkspace(destPath, 'copy')
+      const fileName = basename(srcPath)
+      const newPath = join(destPath, fileName)
+      await cp(srcPath, newPath, { recursive: true })
+    } catch (err) {
+      log.error('copy', err)
       throw err
     }
   })
