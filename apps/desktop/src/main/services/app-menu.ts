@@ -1,6 +1,6 @@
 import { app, Menu, dialog, BrowserWindow } from 'electron'
 import { addRecentWorkspace } from './state-persistence'
-import { createWindow, getWindowWorkspacePath } from './window-manager'
+import { createWindow } from './window-manager'
 import { checkForUpdates } from './auto-updater'
 
 export function buildAppMenu(): void {
@@ -29,6 +29,14 @@ export function buildAppMenu(): void {
       label: 'File',
       submenu: [
         {
+          label: 'New Window',
+          accelerator: 'CmdOrCtrl+N',
+          click: () => {
+            createWindow()
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Open Folder...',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
@@ -42,13 +50,7 @@ export function buildAppMenu(): void {
 
             const folderPath = result.filePaths[0]
             await addRecentWorkspace(folderPath)
-
-            const currentWorkspace = getWindowWorkspacePath(win.id)
-            if (!currentWorkspace) {
-              win.webContents.send('menu:open-folder', folderPath)
-            } else {
-              createWindow(folderPath)
-            }
+            win.webContents.send('menu:open-folder', folderPath)
           }
         },
         { type: 'separator' },
