@@ -25,6 +25,7 @@ publish:
   provider: github
   owner: ariefrizkyr
   repo: orqa-note
+  releaseType: release
 dmg:
   writeUpdateInfo: false
   contents:
