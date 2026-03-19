@@ -27,7 +27,7 @@ Clicking a sidebar item for an already-open file SHALL switch to the existing ta
 - **THEN** system switches to the existing tab without creating a new one
 
 ### Requirement: Tab persistence
-Open tabs and their order SHALL be persisted to `userData/workspaces/<folder-hash>/tabs.json` and restored on app relaunch.
+Open tabs and their order SHALL be persisted to `userData/workspaces/<folder-hash>/workspace-state.json` and restored on workspace activation (either on app launch or workspace switch within a group). Sidebar width is NOT included in per-workspace state — it is persisted globally.
 
 #### Scenario: App restart with tabs
 - **WHEN** user closes the app with 3 tabs open and relaunches
@@ -38,8 +38,16 @@ Open tabs and their order SHALL be persisted to `userData/workspaces/<folder-has
 - **THEN** system shows a "File not found" state in that tab with option to close
 
 #### Scenario: Debounced persistence
-- **WHEN** user rapidly opens and closes multiple tabs within 1 second
-- **THEN** system writes tab state to disk at most once after a 1-second debounce
+- **WHEN** user opens or closes tabs rapidly
+- **THEN** system debounces save operations at 1-second intervals to avoid excessive disk writes
+
+#### Scenario: Backward compatibility with tabs.json
+- **WHEN** `workspace-state.json` does not exist but `tabs.json` does
+- **THEN** system reads tab state from `tabs.json` as a fallback
+
+#### Scenario: Workspace switch preserves tabs
+- **WHEN** user switches from workspace A to workspace B within a group
+- **THEN** workspace A's tabs are saved, workspace B's tabs are restored, and no tabs are lost
 
 ### Requirement: Tab keyboard navigation
 The system SHALL support keyboard shortcuts for tab management.
