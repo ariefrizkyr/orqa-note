@@ -1,12 +1,15 @@
 import { BrowserWindow } from 'electron'
-import { join } from 'path'
+import { join, basename } from 'path'
 import { stopWatching } from './fs-watcher'
-import { addWorkspaceRoot, removeWorkspaceRoot } from '../ipc/fs-handlers'
+import {
+  getGroup,
+  removeLastOpenedGroup
+} from './workspace-group-persistence'
 
-// Map of window id → workspace path for multi-window support
-const windowWorkspacePaths = new Map<number, string>()
+// Map of window id → group id for multi-window support
+const windowGroupMap = new Map<number, string>()
 
-export function createWindow(workspacePath?: string): BrowserWindow {
+export function createWindow(groupId?: string): BrowserWindow {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -23,9 +26,10 @@ export function createWindow(workspacePath?: string): BrowserWindow {
     }
   })
 
-  if (workspacePath) {
-    windowWorkspacePaths.set(win.id, workspacePath)
-    addWorkspaceRoot(workspacePath)
+  if (groupId) {
+    windowGroupMap.set(win.id, groupId)
+    // Set title asynchronously from group data
+    updateWindowTitle(win.id)
   }
 
   // In dev, load from vite dev server; in prod, load the built file
@@ -37,14 +41,53 @@ export function createWindow(workspacePath?: string): BrowserWindow {
 
   win.on('closed', () => {
     stopWatching(win.id)
-    const wsPath = windowWorkspacePaths.get(win.id)
-    if (wsPath) removeWorkspaceRoot(wsPath)
-    windowWorkspacePaths.delete(win.id)
+    const gId = windowGroupMap.get(win.id)
+    if (gId) {
+      removeLastOpenedGroup(gId)
+    }
+    windowGroupMap.delete(win.id)
   })
 
   return win
 }
 
-export function getWindowWorkspacePath(windowId: number): string | undefined {
-  return windowWorkspacePaths.get(windowId)
+export function getWindowGroupId(windowId: number): string | undefined {
+  return windowGroupMap.get(windowId)
+}
+
+export function setWindowGroupId(windowId: number, groupId: string): void {
+  windowGroupMap.set(windowId, groupId)
+}
+
+export function clearWindowGroupId(windowId: number): void {
+  windowGroupMap.delete(windowId)
+}
+
+export function findWindowByGroupId(groupId: string): BrowserWindow | undefined {
+  for (const [winId, gId] of windowGroupMap.entries()) {
+    if (gId === groupId) {
+      return BrowserWindow.fromId(winId) ?? undefined
+    }
+  }
+  return undefined
+}
+
+export async function updateWindowTitle(windowId: number): Promise<void> {
+  const groupId = windowGroupMap.get(windowId)
+  if (!groupId) return
+
+  const group = await getGroup(groupId)
+  if (!group) return
+
+  const win = BrowserWindow.fromId(windowId)
+  if (!win) return
+
+  const workspaceName = group.activeWorkspace ? basename(group.activeWorkspace) : 'No workspace'
+  win.setTitle(`${group.name} — ${workspaceName}`)
+}
+
+// Legacy helper for workspace root tracking (used by fs-handlers)
+export function getWindowWorkspacePath(_windowId: number): string | undefined {
+  // This is now resolved via group's activeWorkspace
+  return undefined
 }

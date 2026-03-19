@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Open folder as workspace
 The system SHALL allow users to open a local folder via macOS native folder picker (`NSOpenPanel`). The selected folder is added to the current workspace group and becomes the active workspace. If no workspace group exists yet, the system SHALL create a default group named after the folder.
@@ -57,4 +57,8 @@ The system SHALL allow users to switch workspaces via the sidebar dropdown withi
 - **WHEN** user presses `Cmd+O` on the Welcome Screen (no workspace loaded)
 - **THEN** system opens the folder picker, creates a default group if needed, and loads the selected folder
 
-<!-- REMOVED: Previous "Switch workspace" requirement (old behavior where Cmd+O replaces workspace in window, destroying all state) was superseded by the group-based model where Cmd+O adds to the current group and workspace switching happens via the sidebar dropdown. -->
+## REMOVED Requirements
+
+### Requirement: Switch workspace
+**Reason**: Replaced by workspace switching within groups via sidebar dropdown. The old behavior (Cmd+O replaces workspace in window, destroying all state) is superseded by the group-based model where Cmd+O adds to the current group.
+**Migration**: Cmd+O now adds workspaces to the current group. Workspace switching happens via the sidebar dropdown.

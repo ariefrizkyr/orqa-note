@@ -4,7 +4,6 @@ import {
   setRecentWorkspaces,
   addRecentWorkspace
 } from '../services/state-persistence'
-import { getWindowWorkspacePath } from '../services/window-manager'
 import { addWorkspaceRoot } from './fs-handlers'
 
 export function registerWorkspaceHandlers(): void {
@@ -25,10 +24,9 @@ export function registerWorkspaceHandlers(): void {
     return folderPath
   })
 
-  ipcMain.handle('workspace:getInitialPath', (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    if (!win) return null
-    return getWindowWorkspacePath(win.id) ?? null
+  ipcMain.handle('workspace:getInitialPath', () => {
+    // No longer used for workspace path — group system handles this
+    return null
   })
 
   ipcMain.handle('workspace:getRecent', async () => {

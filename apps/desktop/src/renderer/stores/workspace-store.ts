@@ -10,6 +10,7 @@ interface WorkspaceStore {
   setRootNodes: (nodes: FileNode[]) => void
   toggleExpanded: (path: string) => void
   setExpanded: (path: string, expanded: boolean) => void
+  setExpandedPaths: (paths: string[]) => void
   collapseAll: () => void
   updateNodeChildren: (parentPath: string, children: FileNode[]) => void
   addNode: (parentPath: string, node: FileNode) => void
@@ -63,6 +64,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
       }
       return { expandedPaths: next }
     }),
+
+  setExpandedPaths: (paths) => set({ expandedPaths: new Set(paths) }),
 
   collapseAll: () => set({ expandedPaths: new Set() }),
 

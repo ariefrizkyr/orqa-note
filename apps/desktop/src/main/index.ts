@@ -4,10 +4,13 @@ import { registerWorkspaceHandlers } from './ipc/workspace-handlers'
 import { registerTabHandlers } from './ipc/tab-handlers'
 import { registerWebviewHandlers } from './ipc/webview-handlers'
 import { registerUpdaterHandlers } from './ipc/updater-handlers'
+import { registerWorkspaceGroupHandlers } from './ipc/workspace-group-handlers'
+import { registerGlobalUIHandlers } from './ipc/global-ui-handlers'
 import { startWatching, stopWatching, stopAllWatching, updateWatchedPaths } from './services/fs-watcher'
 import { createWindow } from './services/window-manager'
 import { buildAppMenu } from './services/app-menu'
 import { scheduleUpdateCheck } from './services/auto-updater'
+import { getLastOpenedGroupIds, getGroup } from './services/workspace-group-persistence'
 
 app.setName('Orqa')
 
@@ -17,6 +20,8 @@ registerWorkspaceHandlers()
 registerTabHandlers()
 registerWebviewHandlers()
 registerUpdaterHandlers()
+registerWorkspaceGroupHandlers()
+registerGlobalUIHandlers()
 
 // FS watch IPC — per-window watchers
 ipcMain.on('fsWatch:watch', (event, rootPath: string) => {
@@ -40,10 +45,30 @@ ipcMain.on('fsWatch:updatePaths', (event, paths: string[]) => {
   }
 })
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   buildAppMenu()
-  createWindow()
   scheduleUpdateCheck()
+
+  // Restore previously open workspace groups
+  const lastGroupIds = await getLastOpenedGroupIds()
+
+  if (lastGroupIds.length > 0) {
+    for (const groupId of lastGroupIds) {
+      const group = await getGroup(groupId)
+      if (group) {
+        const win = createWindow(groupId)
+        // Send active workspace once window is ready
+        if (group.activeWorkspace) {
+          win.webContents.once('did-finish-load', () => {
+            win.webContents.send('menu:open-folder', group.activeWorkspace)
+          })
+        }
+      }
+    }
+  } else {
+    // No groups — show welcome screen
+    createWindow()
+  }
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

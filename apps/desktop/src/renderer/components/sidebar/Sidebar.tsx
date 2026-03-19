@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useLayoutEffect } from 'react'
-import { WorkspaceHeader } from './WorkspaceHeader'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { FileTree } from './FileTree'
 import type { InlineCreateState } from './FileTree'
 import { BookmarkFormModal } from './BookmarkFormModal'
@@ -261,7 +261,21 @@ export function Sidebar() {
         className="flex h-full flex-col border-r border-neutral-700 bg-neutral-900"
         style={{ width: sidebarWidth }}
       >
-        <WorkspaceHeader workspacePath={workspacePath} />
+        <WorkspaceSwitcher
+          workspacePath={workspacePath}
+          onSwitchWorkspace={(path) => {
+            window.dispatchEvent(new CustomEvent('workspace:open', { detail: path }))
+          }}
+          onAddWorkspace={async () => {
+            const path = await window.electronAPI.workspace.openFolder()
+            if (path) {
+              const { useGroupStore } = await import('../../stores/group-store')
+              const updatedGroup = await window.electronAPI.workspaceGroup.addWorkspace(path)
+              useGroupStore.getState().setGroup(updatedGroup)
+              window.dispatchEvent(new CustomEvent('workspace:open', { detail: path }))
+            }
+          }}
+        />
         <FileTree
           onContextMenu={handleContextMenu}
           onEmptySpaceContextMenu={handleEmptySpaceContextMenu}
