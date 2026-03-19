@@ -43,12 +43,19 @@ export async function addRecentWorkspace(path: string): Promise<void> {
 
 export async function getTabState(workspacePath: string): Promise<WorkspaceState | null> {
   const dir = getWorkspaceDir(workspacePath)
-  const filePath = join(dir, 'tabs.json')
+  // Try workspace-state.json first, fall back to tabs.json for backward compatibility
+  const primaryPath = join(dir, 'workspace-state.json')
+  const fallbackPath = join(dir, 'tabs.json')
   try {
-    const data = await readFile(filePath, 'utf-8')
+    const data = await readFile(primaryPath, 'utf-8')
     return JSON.parse(data)
   } catch {
-    return null
+    try {
+      const data = await readFile(fallbackPath, 'utf-8')
+      return JSON.parse(data)
+    } catch {
+      return null
+    }
   }
 }
 
@@ -58,6 +65,6 @@ export async function saveTabState(
 ): Promise<void> {
   const dir = getWorkspaceDir(workspacePath)
   await mkdir(dir, { recursive: true })
-  const filePath = join(dir, 'tabs.json')
+  const filePath = join(dir, 'workspace-state.json')
   await writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8')
 }

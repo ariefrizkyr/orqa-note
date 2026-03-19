@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { WelcomeScreen } from './components/welcome/WelcomeScreen'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { TabBar } from './components/tabs/TabBar'
@@ -10,41 +10,94 @@ import { Toast } from './components/toast/Toast'
 import { useWorkspaceStore } from './stores/workspace-store'
 import { useTabStore } from './stores/tab-store'
 import { useUIStore } from './stores/ui-store'
+import { useGroupStore } from './stores/group-store'
 import { useFsEvents } from './hooks/use-fs-events'
 import { useKeyboard } from './hooks/use-keyboard'
 import { debouncedSaveTabState, flushSaveTabState, cancelPendingSave } from './lib/ipc'
+import type { WorkspaceState, FileNode } from '../shared/types'
+import { basename } from './lib/file-utils'
+
+// In-memory cache for workspace state (LRU, max 3)
+interface CachedWorkspace {
+  rootNodes: FileNode[]
+  tabs: WorkspaceState['tabs']
+  activeTabId: string | null
+  expandedPaths: string[]
+  sidebarVisible: boolean
+  lastAccess: number
+}
+
+const workspaceCache = new Map<string, CachedWorkspace>()
+const MAX_CACHE = 3
+
+function evictCache(): void {
+  if (workspaceCache.size <= MAX_CACHE) return
+  let oldestKey: string | null = null
+  let oldestTime = Infinity
+  for (const [key, val] of workspaceCache.entries()) {
+    if (val.lastAccess < oldestTime) {
+      oldestTime = val.lastAccess
+      oldestKey = key
+    }
+  }
+  if (oldestKey) workspaceCache.delete(oldestKey)
+}
 
 export default function App() {
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
   const setWorkspacePath = useWorkspaceStore((s) => s.setWorkspacePath)
   const setRootNodes = useWorkspaceStore((s) => s.setRootNodes)
-  const sidebarWidth = useUIStore((s) => s.sidebarWidth)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
   const { tabs, activeTabId, setTabs } = useTabStore()
+  const group = useGroupStore((s) => s.group)
+  const setGroup = useGroupStore((s) => s.setGroup)
+
+  const preloadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useFsEvents()
   useKeyboard()
 
-  // Auto-open workspace if this window was created with an initial path
+  // Initialize global UI state and load group data on mount
   useEffect(() => {
-    window.electronAPI.workspace.getInitialPath().then((path) => {
-      if (path) openWorkspace(path)
-    })
-  }, [])
+    useUIStore.getState().initFromGlobal()
 
-  // Save tab state on changes (debounced)
+    window.electronAPI.workspaceGroup.getForWindow().then((g) => {
+      if (g) {
+        setGroup(g)
+      }
+    })
+  }, [setGroup])
+
+  // Save tab state on changes (debounced) — includes expandedPaths
   useEffect(() => {
     if (!workspacePath) return
+    const expandedPaths = Array.from(useWorkspaceStore.getState().expandedPaths)
     debouncedSaveTabState(workspacePath, {
       tabs,
       activeTabId,
-      sidebarWidth,
-      sidebarVisible
+      sidebarVisible,
+      expandedPaths
     })
-  }, [tabs, activeTabId, workspacePath, sidebarWidth, sidebarVisible])
+  }, [tabs, activeTabId, workspacePath, sidebarVisible])
 
-  // Listen for workspace:open events from keyboard handler
+  // Also save when expandedPaths change
+  useEffect(() => {
+    if (!workspacePath) return
+    const unsub = useWorkspaceStore.subscribe((state, prev) => {
+      if (state.expandedPaths !== prev.expandedPaths && state.workspacePath) {
+        debouncedSaveTabState(state.workspacePath, {
+          tabs: useTabStore.getState().tabs,
+          activeTabId: useTabStore.getState().activeTabId,
+          sidebarVisible: useUIStore.getState().sidebarVisible,
+          expandedPaths: Array.from(state.expandedPaths)
+        })
+      }
+    })
+    return unsub
+  }, [workspacePath])
+
+  // Listen for workspace:open events from keyboard handler / menu
   useEffect(() => {
     const handler = (e: Event) => {
       const path = (e as CustomEvent).detail as string
@@ -54,49 +107,143 @@ export default function App() {
     return () => window.removeEventListener('workspace:open', handler)
   }, [])
 
+  // Lazy preload inactive workspaces after 2s idle
+  useEffect(() => {
+    if (!workspacePath || !group) return
+
+    if (preloadTimerRef.current) clearTimeout(preloadTimerRef.current)
+    preloadTimerRef.current = setTimeout(async () => {
+      const inactive = group.workspaces
+        .filter((w) => w !== workspacePath && !workspaceCache.has(w))
+        .slice(0, 2)
+
+      for (const ws of inactive) {
+        try {
+          const [nodes, state] = await Promise.all([
+            window.electronAPI.fs.readDir(ws),
+            window.electronAPI.tabs.getState(ws)
+          ])
+          workspaceCache.set(ws, {
+            rootNodes: nodes,
+            tabs: state?.tabs ?? [],
+            activeTabId: state?.activeTabId ?? null,
+            expandedPaths: state?.expandedPaths ?? [],
+            sidebarVisible: state?.sidebarVisible ?? true,
+            lastAccess: Date.now()
+          })
+          evictCache()
+        } catch {
+          // Workspace folder may not exist — skip silently
+        }
+      }
+    }, 2000)
+
+    return () => {
+      if (preloadTimerRef.current) clearTimeout(preloadTimerRef.current)
+    }
+  }, [workspacePath, group])
+
+  const buildWorkspaceState = useCallback((): WorkspaceState => {
+    return {
+      tabs: useTabStore.getState().tabs,
+      activeTabId: useTabStore.getState().activeTabId,
+      sidebarVisible: useUIStore.getState().sidebarVisible,
+      expandedPaths: Array.from(useWorkspaceStore.getState().expandedPaths)
+    }
+  }, [])
+
+  const restoreExpandedDirs = useCallback(async (expandedPaths: string[]) => {
+    // Read children for each expanded directory
+    for (const dirPath of expandedPaths) {
+      try {
+        const children = await window.electronAPI.fs.readDir(dirPath)
+        useWorkspaceStore.getState().updateNodeChildren(dirPath, children)
+      } catch {
+        // Directory may no longer exist — skip
+      }
+    }
+  }, [])
+
   const openWorkspace = useCallback(
     async (folderPath: string) => {
-      // Flush current tab state before switching
+      // Flush current workspace state before switching
       const currentPath = useWorkspaceStore.getState().workspacePath
       if (currentPath) {
-        const currentTabs = useTabStore.getState().tabs
-        const currentActiveId = useTabStore.getState().activeTabId
-        await flushSaveTabState(currentPath, {
-          tabs: currentTabs,
-          activeTabId: currentActiveId,
-          sidebarWidth: useUIStore.getState().sidebarWidth,
-          sidebarVisible: useUIStore.getState().sidebarVisible
+        await flushSaveTabState(currentPath, buildWorkspaceState())
+
+        // Cache current workspace for fast switching back
+        workspaceCache.set(currentPath, {
+          rootNodes: useWorkspaceStore.getState().rootNodes,
+          tabs: useTabStore.getState().tabs,
+          activeTabId: useTabStore.getState().activeTabId,
+          expandedPaths: Array.from(useWorkspaceStore.getState().expandedPaths),
+          sidebarVisible: useUIStore.getState().sidebarVisible,
+          lastAccess: Date.now()
         })
+        evictCache()
       }
 
       // Cancel any pending debounced save before resetting
       cancelPendingSave()
       useTabStore.getState().reset()
 
-      setWorkspacePath(folderPath)
-      const nodes = await window.electronAPI.fs.readDir(folderPath)
-      setRootNodes(nodes)
-
-      // Restore saved tab state
-      const savedState = await window.electronAPI.tabs.getState(folderPath)
-      if (savedState && savedState.tabs.length > 0) {
-        setTabs(savedState.tabs, savedState.activeTabId)
-        if (savedState.sidebarWidth) {
-          useUIStore.getState().setSidebarWidth(savedState.sidebarWidth)
+      // Check cache first
+      const cached = workspaceCache.get(folderPath)
+      if (cached) {
+        cached.lastAccess = Date.now()
+        setWorkspacePath(folderPath)
+        setRootNodes(cached.rootNodes)
+        useWorkspaceStore.getState().setExpandedPaths(cached.expandedPaths)
+        setTabs(cached.tabs, cached.activeTabId)
+        if (cached.sidebarVisible !== undefined) {
+          useUIStore.getState().setSidebarVisible(cached.sidebarVisible)
         }
-        if (savedState.sidebarVisible !== undefined) {
-          useUIStore.getState().setSidebarVisible(savedState.sidebarVisible)
+        // Re-read expanded dirs to catch external changes
+        restoreExpandedDirs(cached.expandedPaths)
+      } else {
+        setWorkspacePath(folderPath)
+        const nodes = await window.electronAPI.fs.readDir(folderPath)
+        setRootNodes(nodes)
+
+        // Restore saved state
+        const savedState = await window.electronAPI.tabs.getState(folderPath)
+        if (savedState && savedState.tabs.length > 0) {
+          setTabs(savedState.tabs, savedState.activeTabId)
+          if (savedState.sidebarVisible !== undefined) {
+            useUIStore.getState().setSidebarVisible(savedState.sidebarVisible)
+          }
+          if (savedState.expandedPaths && savedState.expandedPaths.length > 0) {
+            useWorkspaceStore.getState().setExpandedPaths(savedState.expandedPaths)
+            restoreExpandedDirs(savedState.expandedPaths)
+          }
         }
       }
+
+      // Update group's active workspace
+      if (group) {
+        await window.electronAPI.workspaceGroup.setActiveWorkspace(folderPath)
+        // Update local group state
+        useGroupStore.getState().updateGroup({ activeWorkspace: folderPath })
+      }
     },
-    [setWorkspacePath, setRootNodes, setTabs]
+    [setWorkspacePath, setRootNodes, setTabs, buildWorkspaceState, restoreExpandedDirs, group]
   )
 
   const handleOpenFolder = useCallback(async () => {
     const path = await window.electronAPI.workspace.openFolder()
-    if (path) {
-      openWorkspace(path)
+    if (!path) return
+
+    // If no group exists, create a default one
+    if (!useGroupStore.getState().group) {
+      const newGroup = await window.electronAPI.workspaceGroup.create(basename(path), path)
+      useGroupStore.getState().setGroup(newGroup)
+    } else {
+      // Add workspace to current group
+      const updatedGroup = await window.electronAPI.workspaceGroup.addWorkspace(path)
+      useGroupStore.getState().setGroup(updatedGroup)
     }
+
+    openWorkspace(path)
   }, [openWorkspace])
 
   if (!workspacePath) {
@@ -104,12 +251,27 @@ export default function App() {
       <div className="flex h-screen flex-col bg-neutral-900">
         <WelcomeScreen
           onOpenFolder={handleOpenFolder}
-          onOpenRecent={(path) => openWorkspace(path)}
+          onOpenRecent={(path) => {
+            // When opening from recent, also add to group
+            handleOpenRecent(path)
+          }}
         />
         <UpdateToast />
         <Toast />
       </div>
     )
+  }
+
+  // Helper for opening recent workspaces
+  async function handleOpenRecent(path: string) {
+    if (!useGroupStore.getState().group) {
+      const newGroup = await window.electronAPI.workspaceGroup.create(basename(path), path)
+      useGroupStore.getState().setGroup(newGroup)
+    } else {
+      const updatedGroup = await window.electronAPI.workspaceGroup.addWorkspace(path)
+      useGroupStore.getState().setGroup(updatedGroup)
+    }
+    openWorkspace(path)
   }
 
   return (

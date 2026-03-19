@@ -28,8 +28,26 @@ export interface Tab {
 export interface WorkspaceState {
   tabs: Tab[]
   activeTabId: string | null
-  sidebarWidth: number
   sidebarVisible?: boolean
+  expandedPaths?: string[]
+  /** @deprecated Use global UI state for sidebarWidth */
+  sidebarWidth?: number
+}
+
+export interface WorkspaceGroup {
+  id: string
+  name: string
+  workspaces: string[]
+  activeWorkspace: string | null
+}
+
+export interface WorkspaceGroupsFile {
+  groups: WorkspaceGroup[]
+  lastOpenedGroupIds: string[]
+}
+
+export interface GlobalUIState {
+  sidebarWidth: number
 }
 
 export type FSEventType = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
@@ -84,6 +102,20 @@ export interface ElectronAPI {
   webview: {
     openExternal: (url: string) => Promise<void>
     getPartition: (workspacePath: string) => Promise<string>
+  }
+  workspaceGroup: {
+    getForWindow: () => Promise<WorkspaceGroup | null>
+    addWorkspace: (workspacePath: string) => Promise<WorkspaceGroup>
+    removeWorkspace: (workspacePath: string) => Promise<WorkspaceGroup>
+    setActiveWorkspace: (workspacePath: string) => Promise<void>
+    rename: (name: string) => Promise<WorkspaceGroup>
+    getAll: () => Promise<WorkspaceGroup[]>
+    create: (name: string, firstWorkspacePath: string) => Promise<WorkspaceGroup>
+    open: (groupId: string) => Promise<void>
+  }
+  globalUI: {
+    getState: () => Promise<GlobalUIState>
+    saveState: (state: GlobalUIState) => Promise<void>
   }
   fsWatch: {
     watch: (rootPath: string) => void

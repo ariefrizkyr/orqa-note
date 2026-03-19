@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { ElectronAPI, FSEvent, UpdateStatus, WorkspaceState } from '../shared/types'
+import type { ElectronAPI, FSEvent, UpdateStatus, WorkspaceState, GlobalUIState } from '../shared/types'
 
 const api: ElectronAPI = {
   fs: {
@@ -38,6 +38,25 @@ const api: ElectronAPI = {
   webview: {
     openExternal: (url: string) => ipcRenderer.invoke('webview:openExternal', url),
     getPartition: (workspacePath: string) => ipcRenderer.invoke('webview:getPartition', workspacePath)
+  },
+  workspaceGroup: {
+    getForWindow: () => ipcRenderer.invoke('workspaceGroup:getForWindow'),
+    addWorkspace: (workspacePath: string) =>
+      ipcRenderer.invoke('workspaceGroup:addWorkspace', workspacePath),
+    removeWorkspace: (workspacePath: string) =>
+      ipcRenderer.invoke('workspaceGroup:removeWorkspace', workspacePath),
+    setActiveWorkspace: (workspacePath: string) =>
+      ipcRenderer.invoke('workspaceGroup:setActiveWorkspace', workspacePath),
+    rename: (name: string) =>
+      ipcRenderer.invoke('workspaceGroup:rename', name),
+    getAll: () => ipcRenderer.invoke('workspaceGroup:getAll'),
+    create: (name: string, firstWorkspacePath: string) =>
+      ipcRenderer.invoke('workspaceGroup:create', name, firstWorkspacePath),
+    open: (groupId: string) => ipcRenderer.invoke('workspaceGroup:open', groupId)
+  },
+  globalUI: {
+    getState: () => ipcRenderer.invoke('globalUI:getState'),
+    saveState: (state: GlobalUIState) => ipcRenderer.invoke('globalUI:saveState', state)
   },
   fsWatch: {
     watch: (rootPath: string) => ipcRenderer.send('fsWatch:watch', rootPath),
