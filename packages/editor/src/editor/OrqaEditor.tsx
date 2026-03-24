@@ -317,12 +317,11 @@ function MilkdownEditor({
                 const { $from } = selection
                 const node = $from.node()
                 if (node.type.name !== 'paragraph') return false
-                // Only look for "/" before the cursor, not anywhere in the paragraph
+                // Only trigger slash menu when "/" is the first character in the paragraph
                 const textBeforeCursor = node.textContent.slice(0, $from.parentOffset)
-                const slashIdx = textBeforeCursor.lastIndexOf('/')
-                if (slashIdx === -1) return false
-                // Don't trigger if there's a space between the slash and cursor
-                const afterSlash = textBeforeCursor.slice(slashIdx + 1)
+                if (!textBeforeCursor.startsWith('/')) return false
+                // Don't trigger if there's a space after the slash
+                const afterSlash = textBeforeCursor.slice(1)
                 if (afterSlash.includes(' ')) return false
                 currentFilter = afterSlash
                 return true
