@@ -14,6 +14,7 @@ import { useFileEditor } from '../../hooks/use-file-editor'
 import { extname, basename } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
+import type { Tab } from '../../../shared/types'
 
 function SaveErrorBanner({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -231,15 +232,38 @@ function PdfFileViewer({ filePath }: { filePath: string }) {
   return <PdfViewer data={data} />
 }
 
-export function ContentArea() {
-  const { tabs, activeTabId, closeTab } = useTabStore()
-  const activeTab = tabs.find((t) => t.id === activeTabId)
-  const [fileExists, setFileExists] = useState<boolean | null>(null)
-  const [partition, setPartition] = useState<string | null>(null)
+function BookmarkWebview({ tab, partition, isActive }: { tab: Tab; partition: string | null; isActive: boolean }) {
   const [webviewEl, setWebviewEl] = useState<HTMLElement | null>(null)
   const webviewCallbackRef = useCallback((node: HTMLElement | null) => {
     setWebviewEl(node)
   }, [])
+
+  if (!partition || !tab.bookmarkUrl) return null
+
+  return (
+    <div
+      className="flex h-full flex-col overflow-hidden"
+      style={isActive ? { position: 'absolute', inset: 0 } : { position: 'absolute', inset: 0, visibility: 'hidden' }}
+    >
+      <WebviewToolbar tab={tab} webviewEl={webviewEl} />
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <webview
+          ref={webviewCallbackRef as React.Ref<HTMLElement>}
+          src={tab.bookmarkUrl}
+          partition={partition}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        />
+      </div>
+    </div>
+  )
+}
+
+export function ContentArea() {
+  const { tabs, activeTabId, closeTab } = useTabStore()
+  const activeTab = tabs.find((t) => t.id === activeTabId)
+  const bookmarkTabs = tabs.filter((t) => t.type === 'bookmark')
+  const [fileExists, setFileExists] = useState<boolean | null>(null)
+  const [partition, setPartition] = useState<string | null>(null)
   const workspacePath = useWorkspaceStore((s) => s.workspacePath)
 
   // Fetch partition for webview sessions
@@ -257,39 +281,31 @@ export function ContentArea() {
       .then(setFileExists)
   }, [activeTab?.filePath, activeTab?.type])
 
+  // Always render all bookmark webviews to preserve their state
+  const bookmarkWebviews = bookmarkTabs.map((tab) => (
+    <BookmarkWebview
+      key={tab.id}
+      tab={tab}
+      partition={partition}
+      isActive={tab.id === activeTabId}
+    />
+  ))
+
+  // Determine non-bookmark content
+  let content: React.ReactNode = null
+
   if (!activeTab) {
-    return (
+    content = (
       <div className="flex h-full items-center justify-center text-neutral-500">
         <p className="text-sm">Open a file from the sidebar</p>
       </div>
     )
-  }
-
-  if (activeTab.type === 'new-tab') {
-    return <NewTabScreen />
-  }
-
-  if (activeTab.type === 'bookmark') {
-    return (
-      <div className="flex h-full flex-col overflow-hidden">
-        <WebviewToolbar tab={activeTab} webviewEl={webviewEl} />
-        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-          {partition && activeTab.bookmarkUrl && (
-            <webview
-              ref={webviewCallbackRef as React.Ref<HTMLElement>}
-              src={activeTab.bookmarkUrl}
-              partition={partition}
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-            />
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // File tab — check existence
-  if (activeTab.type === 'file' && fileExists === false) {
-    return (
+  } else if (activeTab.type === 'new-tab') {
+    content = <NewTabScreen />
+  } else if (activeTab.type === 'bookmark') {
+    // Active bookmark is shown via bookmarkWebviews; no extra content needed
+  } else if (activeTab.type === 'file' && fileExists === false) {
+    content = (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
         <span className="text-4xl">🚫</span>
         <p className="text-sm">File not found</p>
@@ -302,52 +318,45 @@ export function ContentArea() {
         </button>
       </div>
     )
+  } else {
+    const ext = activeTab.filePath ? extname(activeTab.filePath) : ''
+
+    if (ext === 'md') {
+      content = <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+    } else if (ext === 'pdf') {
+      content = <PdfFileViewer filePath={activeTab.filePath!} />
+    } else if (ext === 'xlsx' || ext === 'csv') {
+      content = <SpreadsheetFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+    } else if (ext === 'excalidraw') {
+      content = <ExcalidrawFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+    } else if (isBinaryExtension(ext)) {
+      content = (
+        <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
+          <span className="text-4xl">📄</span>
+          <p className="text-sm">
+            Preview not available for <strong>.{ext}</strong> files
+          </p>
+          <button
+            onClick={() => {
+              if (activeTab.filePath) {
+                window.electronAPI.fs.openInDefaultApp(activeTab.filePath)
+              }
+            }}
+            className="rounded bg-neutral-700 px-4 py-2 text-sm text-white hover:bg-neutral-600"
+          >
+            Open in Default App
+          </button>
+        </div>
+      )
+    } else {
+      content = <CodeFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+    }
   }
 
-  const ext = activeTab.filePath ? extname(activeTab.filePath) : ''
-
-  // Markdown
-  if (ext === 'md') {
-    return <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
-  }
-
-  // PDF
-  if (ext === 'pdf') {
-    return <PdfFileViewer filePath={activeTab.filePath!} />
-  }
-
-  // Spreadsheet (xlsx, csv)
-  if (ext === 'xlsx' || ext === 'csv') {
-    return <SpreadsheetFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
-  }
-
-  // Excalidraw canvas
-  if (ext === 'excalidraw') {
-    return <ExcalidrawFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
-  }
-
-  // Binary files
-  if (isBinaryExtension(ext)) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
-        <span className="text-4xl">📄</span>
-        <p className="text-sm">
-          Preview not available for <strong>.{ext}</strong> files
-        </p>
-        <button
-          onClick={() => {
-            if (activeTab.filePath) {
-              window.electronAPI.fs.openInDefaultApp(activeTab.filePath)
-            }
-          }}
-          className="rounded bg-neutral-700 px-4 py-2 text-sm text-white hover:bg-neutral-600"
-        >
-          Open in Default App
-        </button>
-      </div>
-    )
-  }
-
-  // Everything else — Monaco code editor
-  return <CodeFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+  return (
+    <>
+      {bookmarkWebviews}
+      {content}
+    </>
+  )
 }
