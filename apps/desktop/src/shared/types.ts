@@ -48,6 +48,8 @@ export interface WorkspaceGroupsFile {
 
 export interface GlobalUIState {
   sidebarWidth: number
+  terminalVisible?: boolean
+  terminalWidth?: number
 }
 
 export type FSEventType = 'add' | 'change' | 'unlink' | 'addDir' | 'unlinkDir'
@@ -128,5 +130,14 @@ export interface ElectronAPI {
     download: () => Promise<void>
     install: () => Promise<void>
     onStatus: (callback: (status: UpdateStatus) => void) => () => void
+  }
+  terminal: {
+    create: (cwd?: string) => Promise<string>
+    write: (sessionId: string, data: string) => void
+    resize: (sessionId: string, cols: number, rows: number) => void
+    kill: (sessionId: string) => void
+    getShellName: () => Promise<string>
+    onData: (callback: (sessionId: string, data: string) => void) => () => void
+    onExit: (callback: (sessionId: string, exitCode: number) => void) => () => void
   }
 }

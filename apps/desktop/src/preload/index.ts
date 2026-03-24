@@ -77,6 +77,23 @@ const api: ElectronAPI = {
       ipcRenderer.on('updater:status', handler)
       return () => ipcRenderer.removeListener('updater:status', handler)
     }
+  },
+  terminal: {
+    create: (cwd?: string) => ipcRenderer.invoke('terminal:create', cwd),
+    write: (sessionId: string, data: string) => ipcRenderer.send('terminal:write', sessionId, data),
+    resize: (sessionId: string, cols: number, rows: number) => ipcRenderer.send('terminal:resize', sessionId, cols, rows),
+    kill: (sessionId: string) => ipcRenderer.send('terminal:kill', sessionId),
+    getShellName: () => ipcRenderer.invoke('terminal:getShellName'),
+    onData: (callback: (sessionId: string, data: string) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, sessionId: string, data: string) => callback(sessionId, data)
+      ipcRenderer.on('terminal:data', handler)
+      return () => ipcRenderer.removeListener('terminal:data', handler)
+    },
+    onExit: (callback: (sessionId: string, exitCode: number) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, sessionId: string, exitCode: number) => callback(sessionId, exitCode)
+      ipcRenderer.on('terminal:exit', handler)
+      return () => ipcRenderer.removeListener('terminal:exit', handler)
+    }
   }
 }
 

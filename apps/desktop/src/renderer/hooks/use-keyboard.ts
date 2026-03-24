@@ -8,6 +8,13 @@ export function useKeyboard(): void {
     function handleKeyDown(e: KeyboardEvent) {
       const meta = e.metaKey || e.ctrlKey
 
+      // Cmd+T — toggle terminal
+      if (meta && !e.shiftKey && e.key === 't') {
+        e.preventDefault()
+        useUIStore.getState().toggleTerminal()
+        return
+      }
+
       // Cmd+B — toggle sidebar (skip if inside editor content area)
       if (meta && e.key === 'b') {
         const target = e.target as HTMLElement
