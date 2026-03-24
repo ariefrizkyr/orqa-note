@@ -51,13 +51,33 @@ export function FuzzySearch() {
   }, [query])
 
   const handleSelect = useCallback(
-    (result: SearchResult) => {
-      openTab({
-        type: 'file',
-        filePath: result.path,
-        label: result.name,
-        icon: getFileIcon(result.extension)
-      })
+    async (result: SearchResult) => {
+      if (result.extension === 'orqlnk') {
+        try {
+          const bookmark = await window.electronAPI.fs.readBookmark(result.path)
+          openTab({
+            type: 'bookmark',
+            filePath: result.path,
+            bookmarkUrl: bookmark.url,
+            label: bookmark.label,
+            icon: '🔗'
+          })
+        } catch {
+          openTab({
+            type: 'file',
+            filePath: result.path,
+            label: `⚠ ${result.name}`,
+            icon: '⚠️'
+          })
+        }
+      } else {
+        openTab({
+          type: 'file',
+          filePath: result.path,
+          label: result.name,
+          icon: getFileIcon(result.extension)
+        })
+      }
       setSearchOpen(false)
     },
     [openTab, setSearchOpen]

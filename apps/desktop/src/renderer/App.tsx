@@ -333,7 +333,7 @@ export default function App() {
           </div>
           {/* Content row — editor and terminal side by side */}
           <div className="flex flex-1 overflow-hidden">
-            <div className="min-w-0 flex-1 overflow-hidden">
+            <div className="relative min-w-0 flex-1 overflow-hidden">
               <ContentArea />
             </div>
             <TerminalContent
