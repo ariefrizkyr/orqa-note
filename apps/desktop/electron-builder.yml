@@ -3,6 +3,7 @@ productName: Orqa Note
 directories:
   buildResources: build
   output: dist
+npmRebuild: false
 files:
   - out/**/*
 mac:
