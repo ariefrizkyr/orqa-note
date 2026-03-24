@@ -145,8 +145,8 @@ export function WorkspaceSwitcher({
   const showGroupName = group && group.workspaces.length > 1
 
   return (
-    <div data-drag className="relative border-b border-neutral-700">
-      <div className="flex items-center justify-between px-4 py-3">
+    <div data-drag className="relative">
+      <div className="flex h-[40px] items-center justify-between border-b border-neutral-700 px-4">
         {/* Dropdown trigger */}
         <button
           data-no-drag
