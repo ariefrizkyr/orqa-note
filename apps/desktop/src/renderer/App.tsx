@@ -7,6 +7,7 @@ import { FuzzySearch } from './components/search/FuzzySearch'
 import { StatusBar } from './components/statusbar/StatusBar'
 import { UpdateToast } from './components/update/UpdateToast'
 import { Toast } from './components/toast/Toast'
+import { TerminalContent, TerminalTabBar, useTerminalTabs } from './components/terminal/TerminalPanel'
 import { useWorkspaceStore } from './stores/workspace-store'
 import { useTabStore } from './stores/tab-store'
 import { useUIStore } from './stores/ui-store'
@@ -49,7 +50,11 @@ export default function App() {
   const setRootNodes = useWorkspaceStore((s) => s.setRootNodes)
   const sidebarVisible = useUIStore((s) => s.sidebarVisible)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+  const terminalVisible = useUIStore((s) => s.terminalVisible)
+  const toggleTerminal = useUIStore((s) => s.toggleTerminal)
+  const terminalWidth = useUIStore((s) => s.terminalWidth)
   const { tabs, activeTabId, setTabs } = useTabStore()
+  const terminalTabs = useTerminalTabs(terminalVisible)
   const group = useGroupStore((s) => s.group)
   const setGroup = useGroupStore((s) => s.setGroup)
 
@@ -276,8 +281,8 @@ export default function App() {
 
   return (
     <div className="flex h-screen flex-col bg-neutral-900">
-      {/* Titlebar — full width drag area with toggle on the right */}
-      <div data-drag className="flex h-11 shrink-0 items-center justify-end border-b border-neutral-700 px-2">
+      {/* Titlebar — full width drag area with toggles on the right */}
+      <div data-drag className="flex h-11 shrink-0 items-center justify-end gap-1 border-b border-neutral-700 px-2">
         <button
           onClick={toggleSidebar}
           className="rounded p-1 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
@@ -291,14 +296,51 @@ export default function App() {
             )}
           </svg>
         </button>
+        <button
+          onClick={toggleTerminal}
+          className="rounded p-1 text-neutral-400 transition-colors hover:bg-neutral-700 hover:text-white"
+          title={terminalVisible ? 'Hide Terminal (⌘T)' : 'Show Terminal (⌘T)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="4 17 10 11 4 5" />
+            <line x1="12" y1="19" x2="20" y2="19" />
+            {terminalVisible && (
+              <rect x="3" y="3" width="18" height="18" rx="2" fill="currentColor" opacity="0.15" stroke="none" />
+            )}
+          </svg>
+        </button>
       </div>
-      {/* Main area — sidebar + content */}
+      {/* Main area — sidebar + content + terminal */}
       <div className="flex flex-1 overflow-hidden">
         {sidebarVisible && <Sidebar />}
         <div className="flex min-w-0 flex-1 flex-col">
-          <TabBar />
-          <div className="flex-1 overflow-hidden">
-            <ContentArea />
+          {/* Tab row — file tabs and terminal tabs side by side */}
+          <div className="flex shrink-0">
+            <div className="min-w-0 flex-1">
+              <TabBar />
+            </div>
+            {terminalVisible && (
+              <div className="shrink-0 border-l border-neutral-700" style={{ width: terminalWidth }}>
+                <TerminalTabBar
+                  tabs={terminalTabs.tabs}
+                  activeTabId={terminalTabs.activeTabId}
+                  onSelect={terminalTabs.handleSelect}
+                  onClose={terminalTabs.handleClose}
+                  onCreate={terminalTabs.createTab}
+                />
+              </div>
+            )}
+          </div>
+          {/* Content row — editor and terminal side by side */}
+          <div className="flex flex-1 overflow-hidden">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <ContentArea />
+            </div>
+            <TerminalContent
+              visible={terminalVisible}
+              tabs={terminalTabs.tabs}
+              activeTabId={terminalTabs.activeTabId}
+            />
           </div>
         </div>
       </div>

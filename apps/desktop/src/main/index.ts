@@ -6,6 +6,7 @@ import { registerWebviewHandlers } from './ipc/webview-handlers'
 import { registerUpdaterHandlers } from './ipc/updater-handlers'
 import { registerWorkspaceGroupHandlers } from './ipc/workspace-group-handlers'
 import { registerGlobalUIHandlers } from './ipc/global-ui-handlers'
+import { registerTerminalHandlers } from './ipc/terminal-handlers'
 import { startWatching, stopWatching, stopAllWatching, updateWatchedPaths } from './services/fs-watcher'
 import { createWindow } from './services/window-manager'
 import { buildAppMenu } from './services/app-menu'
@@ -22,6 +23,7 @@ registerWebviewHandlers()
 registerUpdaterHandlers()
 registerWorkspaceGroupHandlers()
 registerGlobalUIHandlers()
+registerTerminalHandlers()
 
 // FS watch IPC — per-window watchers
 ipcMain.on('fsWatch:watch', (event, rootPath: string) => {

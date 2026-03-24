@@ -12,20 +12,24 @@
     "build:mac": "electron-vite build && electron-builder --mac",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "lint": "echo 'lint not configured yet'"
+    "lint": "echo 'lint not configured yet'",
+    "postinstall": "node scripts/fix-node-pty.js"
   },
   "dependencies": {
     "@orqa-note/code-editor": "workspace:*",
     "@orqa-note/editor": "workspace:*",
-    "@orqa-note/pdf-viewer": "workspace:*",
     "@orqa-note/excalidraw": "workspace:*",
+    "@orqa-note/pdf-viewer": "workspace:*",
     "@orqa-note/spreadsheet": "workspace:*",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "chokidar": "^4.0.0",
+    "electron-updater": "^6.3.9",
     "fuse.js": "^7.0.0",
+    "node-pty": "^1.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "uuid": "^11.0.0",
-    "electron-updater": "^6.3.9",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
