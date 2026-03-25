@@ -18,6 +18,11 @@ interface TabStore {
   setTabs: (tabs: Tab[], activeTabId: string | null) => void
   findTabByFilePath: (filePath: string) => Tab | undefined
   reset: () => void
+  pinTab: (id: string) => void
+  unpinTab: (id: string) => void
+  closeAllTabs: () => void
+  closeOtherTabs: (id: string) => void
+  closeTabsToTheRight: (id: string) => void
 }
 
 export const useTabStore = create<TabStore>((set, get) => ({
@@ -50,6 +55,7 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
   closeTab: (id) => {
     const tab = get().tabs.find((t) => t.id === id)
+    if (tab?.isPinned) return
 
     set((state) => {
       const idx = state.tabs.findIndex((t) => t.id === id)
@@ -93,9 +99,19 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
   reorderTabs: (fromIndex, toIndex) =>
     set((state) => {
+      const pinnedCount = state.tabs.filter((t) => t.isPinned).length
+      const fromPinned = fromIndex < pinnedCount
+      // Clamp toIndex within the same zone
+      let clampedTo = toIndex
+      if (fromPinned) {
+        clampedTo = Math.max(0, Math.min(clampedTo, pinnedCount - 1))
+      } else {
+        clampedTo = Math.max(pinnedCount, Math.min(clampedTo, state.tabs.length - 1))
+      }
+      if (fromIndex === clampedTo) return state
       const newTabs = [...state.tabs]
       const [moved] = newTabs.splice(fromIndex, 1)
-      newTabs.splice(toIndex, 0, moved)
+      newTabs.splice(clampedTo, 0, moved)
       return { tabs: newTabs }
     }),
 
@@ -118,5 +134,76 @@ export const useTabStore = create<TabStore>((set, get) => ({
 
   findTabByFilePath: (filePath) => get().tabs.find((t) => t.filePath === filePath),
 
-  reset: () => set({ tabs: [], activeTabId: null, recentlyClosed: [] })
+  reset: () => set({ tabs: [], activeTabId: null, recentlyClosed: [] }),
+
+  pinTab: (id) =>
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === id)
+      if (idx === -1 || state.tabs[idx].isPinned) return state
+      const newTabs = [...state.tabs]
+      const [tab] = newTabs.splice(idx, 1)
+      const pinnedCount = newTabs.filter((t) => t.isPinned).length
+      newTabs.splice(pinnedCount, 0, { ...tab, isPinned: true })
+      return { tabs: newTabs }
+    }),
+
+  unpinTab: (id) =>
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === id)
+      if (idx === -1 || !state.tabs[idx].isPinned) return state
+      const newTabs = [...state.tabs]
+      const [tab] = newTabs.splice(idx, 1)
+      const pinnedCount = newTabs.filter((t) => t.isPinned).length
+      newTabs.splice(pinnedCount, 0, { ...tab, isPinned: false })
+      return { tabs: newTabs }
+    }),
+
+  closeAllTabs: () =>
+    set((state) => {
+      const pinned = state.tabs.filter((t) => t.isPinned)
+      const closed = state.tabs.filter((t) => !t.isPinned)
+      const newActive = pinned.find((t) => t.id === state.activeTabId)
+        ? state.activeTabId
+        : pinned.length > 0
+          ? pinned[pinned.length - 1].id
+          : null
+      return {
+        tabs: pinned,
+        activeTabId: newActive,
+        recentlyClosed: [...closed, ...state.recentlyClosed].slice(0, 10)
+      }
+    }),
+
+  closeOtherTabs: (id) =>
+    set((state) => {
+      const keep = state.tabs.filter((t) => t.id === id || t.isPinned)
+      const closed = state.tabs.filter((t) => t.id !== id && !t.isPinned)
+      const newActive = keep.find((t) => t.id === state.activeTabId)
+        ? state.activeTabId
+        : id
+      return {
+        tabs: keep,
+        activeTabId: newActive,
+        recentlyClosed: [...closed, ...state.recentlyClosed].slice(0, 10)
+      }
+    }),
+
+  closeTabsToTheRight: (id) =>
+    set((state) => {
+      const idx = state.tabs.findIndex((t) => t.id === id)
+      if (idx === -1) return state
+      const left = state.tabs.slice(0, idx + 1)
+      const right = state.tabs.slice(idx + 1)
+      const keptRight = right.filter((t) => t.isPinned)
+      const closedRight = right.filter((t) => !t.isPinned)
+      const newTabs = [...left, ...keptRight]
+      const newActive = newTabs.find((t) => t.id === state.activeTabId)
+        ? state.activeTabId
+        : id
+      return {
+        tabs: newTabs,
+        activeTabId: newActive,
+        recentlyClosed: [...closedRight, ...state.recentlyClosed].slice(0, 10)
+      }
+    })
 }))
