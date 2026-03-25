@@ -121,11 +121,11 @@ export function FileTreeNode({
       onDrop={handleDrop}
     >
       {node.type === 'directory' ? (
-        <span className="w-4 text-center text-[10px] text-neutral-500">
+        <span className="w-4 shrink-0 text-center text-[10px] text-neutral-500">
           {isExpanded ? '▼' : '▶'}
         </span>
       ) : (
-        <span className="w-4 text-center text-xs">{getFileIcon(node.extension)}</span>
+        <span className="w-4 shrink-0 text-center text-xs">{getFileIcon(node.extension)}</span>
       )}
 
       {isRenaming ? (
