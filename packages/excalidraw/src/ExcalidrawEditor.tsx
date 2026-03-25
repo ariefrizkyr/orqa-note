@@ -14,11 +14,13 @@ export interface ExcalidrawEditorProps {
   name?: string
   onSave?: (content: string) => Promise<void>
   onChange?: () => void
+  onReady?: (content: string) => void
   onExportImage?: (data: ExportImageData) => Promise<void>
 }
 
 export interface ExcalidrawEditorHandle {
   save: () => Promise<void>
+  getContent: () => string | null
 }
 
 const PERSISTENT_APP_STATE_KEYS = new Set([
@@ -75,22 +77,30 @@ function parseInitialData(content: string) {
 }
 
 export const ExcalidrawEditor = forwardRef<ExcalidrawEditorHandle, ExcalidrawEditorProps>(
-  function ExcalidrawEditor({ initialContent, name, onSave, onChange, onExportImage }, ref) {
+  function ExcalidrawEditor({ initialContent, name, onSave, onChange, onReady, onExportImage }, ref) {
     const apiRef = useRef<ExcalidrawImperativeAPI | null>(null)
+    const onReadyRef = useRef(onReady)
+    onReadyRef.current = onReady
 
     const initialData = useMemo(() => parseInitialData(initialContent), [initialContent])
 
-    const save = useCallback(async () => {
+    const getContent = useCallback((): string | null => {
       const api = apiRef.current
-      if (!api || !onSave) return
+      if (!api) return null
       const elements = api.getSceneElements()
       const appState = api.getAppState()
       const files = api.getFiles()
-      const json = serializeScene(elements, appState, files)
-      await onSave(json)
-    }, [onSave])
+      return serializeScene(elements, appState, files)
+    }, [])
 
-    useImperativeHandle(ref, () => ({ save }), [save])
+    const save = useCallback(async () => {
+      const json = getContent()
+      if (json != null && onSave) {
+        await onSave(json)
+      }
+    }, [getContent, onSave])
+
+    useImperativeHandle(ref, () => ({ save, getContent }), [save, getContent])
 
     const handleChange = useCallback(
       (_elements: readonly ExcalidrawElement[], _appState: AppState, _files: BinaryFiles) => {
@@ -101,6 +111,12 @@ export const ExcalidrawEditor = forwardRef<ExcalidrawEditorHandle, ExcalidrawEdi
 
     const handleExcalidrawAPI = useCallback((api: ExcalidrawImperativeAPI) => {
       apiRef.current = api
+      // Fire onReady with serialized content for baseline capture
+      const elements = api.getSceneElements()
+      const appState = api.getAppState()
+      const files = api.getFiles()
+      const json = serializeScene(elements, appState, files)
+      onReadyRef.current?.(json)
     }, [])
 
     const baseName = name ? name.replace(/\.excalidraw$/, '') : 'export'

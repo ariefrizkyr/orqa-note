@@ -45,15 +45,28 @@ function ErrorState({ message }: { message: string }) {
 
 function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
   const editorRef = useRef<OrqaEditorHandle>(null)
-  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+  const { content, error, saveError, isDirty, baseline, setBaseline, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
 
   const handleLinkClick = useCallback((href: string) => {
     window.electronAPI?.webview?.openExternal(href)
   }, [])
 
+  const handleReady = useCallback((serialized: string) => {
+    setBaseline(serialized)
+  }, [setBaseline])
+
   useAutoSave({
     isDirty,
-    onSave: () => editorRef.current?.save(),
+    onSave: () => {
+      const current = editorRef.current?.getContent()
+      if (current != null && current === baseline) {
+        // Content matches baseline — no real user changes, skip write
+        const { clearDirty } = useTabStore.getState()
+        clearDirty(tabId)
+        return
+      }
+      editorRef.current?.save()
+    },
     debounceMs: 2000,
   })
 
@@ -69,6 +82,7 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
           initialContent={content}
           onSave={handleSave}
           onChange={handleChange}
+          onReady={handleReady}
           onLinkClick={handleLinkClick}
         />
       </div>
@@ -78,11 +92,23 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
 
 function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
   const editorRef = useRef<CodeEditorHandle>(null)
-  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+  const { content, error, saveError, isDirty, baseline, setBaseline, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+
+  const handleReady = useCallback((serialized: string) => {
+    setBaseline(serialized)
+  }, [setBaseline])
 
   useAutoSave({
     isDirty,
-    onSave: () => editorRef.current?.save(),
+    onSave: () => {
+      const current = editorRef.current?.getContent()
+      if (current != null && current === baseline) {
+        const { clearDirty } = useTabStore.getState()
+        clearDirty(tabId)
+        return
+      }
+      editorRef.current?.save()
+    },
     debounceMs: 2000,
   })
 
@@ -99,6 +125,7 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
           filePath={filePath}
           onSave={handleSave}
           onChange={handleChange}
+          onReady={handleReady}
         />
       </div>
     </div>
@@ -175,11 +202,23 @@ function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: s
 
 function ExcalidrawFileEditor({ filePath, tabId }: { filePath: string; tabId: string }) {
   const editorRef = useRef<ExcalidrawEditorHandle>(null)
-  const { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+  const { content, error, saveError, isDirty, baseline, setBaseline, handleSave, handleChange, clearSaveError } = useFileEditor({ filePath, tabId })
+
+  const handleReady = useCallback((serialized: string) => {
+    setBaseline(serialized)
+  }, [setBaseline])
 
   useAutoSave({
     isDirty,
-    onSave: () => editorRef.current?.save(),
+    onSave: () => {
+      const current = editorRef.current?.getContent()
+      if (current != null && current === baseline) {
+        const { clearDirty } = useTabStore.getState()
+        clearDirty(tabId)
+        return
+      }
+      editorRef.current?.save()
+    },
     debounceMs: 2000,
   })
 
@@ -207,6 +246,7 @@ function ExcalidrawFileEditor({ filePath, tabId }: { filePath: string; tabId: st
           name={basename(filePath)}
           onSave={handleSave}
           onChange={handleChange}
+          onReady={handleReady}
           onExportImage={handleExportImage}
         />
       </div>

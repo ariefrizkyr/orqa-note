@@ -12,29 +12,38 @@ export interface CodeEditorProps {
   filePath: string
   onSave: (content: string) => void
   onChange: () => void
+  onReady?: (content: string) => void
 }
 
 export interface CodeEditorHandle {
   save: () => void
+  getContent: () => string | null
   format: () => void
 }
 
 let themeRegistered = false
 
 export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
-  function CodeEditor({ initialContent, filePath, onSave, onChange }, ref) {
+  function CodeEditor({ initialContent, filePath, onSave, onChange, onReady }, ref) {
     const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
     const onSaveRef = useRef(onSave)
     const onChangeRef = useRef(onChange)
+    const onReadyRef = useRef(onReady)
     onSaveRef.current = onSave
     onChangeRef.current = onChange
+    onReadyRef.current = onReady
+
+    const getContent = useCallback((): string | null => {
+      const model = editorRef.current?.getModel()
+      return model ? model.getValue() : null
+    }, [])
 
     const save = useCallback(() => {
-      const model = editorRef.current?.getModel()
-      if (model) {
-        onSaveRef.current(model.getValue())
+      const content = getContent()
+      if (content != null) {
+        onSaveRef.current(content)
       }
-    }, [])
+    }, [getContent])
 
     const format = useCallback(async () => {
       const action = editorRef.current?.getAction('editor.action.formatDocument')
@@ -43,7 +52,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       }
     }, [])
 
-    useImperativeHandle(ref, () => ({ save, format }), [save, format])
+    useImperativeHandle(ref, () => ({ save, getContent, format }), [save, getContent, format])
 
     const handleMount: OnMount = useCallback((editor, monaco) => {
       if (!themeRegistered) {
@@ -65,6 +74,12 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       editor.onDidChangeModelContent(() => {
         onChangeRef.current()
       })
+
+      // Notify parent with serialized content for baseline capture
+      const model = editor.getModel()
+      if (model) {
+        onReadyRef.current?.(model.getValue())
+      }
     }, [])
 
     // Dispose the Monaco model on unmount to prevent duplicate model warnings

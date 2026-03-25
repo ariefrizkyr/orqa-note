@@ -12,6 +12,8 @@ interface UseFileEditorResult {
   error: boolean
   saveError: boolean
   isDirty: boolean
+  baseline: string | null
+  setBaseline: (content: string) => void
   handleSave: (text: string) => Promise<void>
   handleChange: () => void
   clearSaveError: () => void
@@ -21,6 +23,7 @@ export function useFileEditor({ filePath, tabId }: UseFileEditorOptions): UseFil
   const [content, setContent] = useState<string | null>(null)
   const [error, setError] = useState(false)
   const [saveError, setSaveError] = useState(false)
+  const [baseline, setBaseline] = useState<string | null>(null)
   const { markDirty, clearDirty } = useTabStore()
   const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
   const contentVersion = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.contentVersion ?? 0)
@@ -29,6 +32,7 @@ export function useFileEditor({ filePath, tabId }: UseFileEditorOptions): UseFil
     setContent(null)
     setError(false)
     setSaveError(false)
+    setBaseline(null)
     window.electronAPI.fs.readFile(filePath)
       .then(setContent)
       .catch(() => setError(true))
@@ -38,6 +42,7 @@ export function useFileEditor({ filePath, tabId }: UseFileEditorOptions): UseFil
     try {
       markSelfWritten(filePath)
       await window.electronAPI.fs.writeFile(filePath, text)
+      setBaseline(text)
       clearDirty(tabId)
       setSaveError(false)
     } catch {
@@ -51,5 +56,5 @@ export function useFileEditor({ filePath, tabId }: UseFileEditorOptions): UseFil
 
   const clearSaveError = useCallback(() => setSaveError(false), [])
 
-  return { content, error, saveError, isDirty, handleSave, handleChange, clearSaveError }
+  return { content, error, saveError, isDirty, baseline, setBaseline, handleSave, handleChange, clearSaveError }
 }
