@@ -3,7 +3,7 @@ import { Tab } from './Tab'
 import { useTabStore } from '../../stores/tab-store'
 
 export function TabBar() {
-  const { tabs, activeTabId, setActiveTab, closeTab, reorderTabs } = useTabStore()
+  const { tabs, activeTabId, setActiveTab, closeTab, reorderTabs, pinTab, unpinTab, closeAllTabs, closeOtherTabs, closeTabsToTheRight } = useTabStore()
   const [dragIndex, setDragIndex] = useState<number | null>(null)
 
   const handleClose = useCallback(
@@ -37,6 +37,11 @@ export function TabBar() {
               }
               setDragIndex(null)
             }}
+            onPin={() => pinTab(tab.id)}
+            onUnpin={() => unpinTab(tab.id)}
+            onCloseOthers={() => closeOtherTabs(tab.id)}
+            onCloseAll={() => closeAllTabs()}
+            onCloseToTheRight={() => closeTabsToTheRight(tab.id)}
           />
         ))}
       </div>
