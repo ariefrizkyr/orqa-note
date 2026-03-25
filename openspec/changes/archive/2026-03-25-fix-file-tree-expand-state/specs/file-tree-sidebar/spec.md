@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Sidebar mirrors filesystem
 The sidebar file tree SHALL be a 1:1 reflection of the workspace folder on disk. Creating, renaming, moving, or deleting files/folders in the sidebar MUST perform the corresponding filesystem operation on disk. When the sidebar is hidden, the file tree component SHALL NOT be rendered but the workspace state (expanded paths, root nodes) SHALL be preserved. Expanded paths SHALL be persisted to disk and restored on workspace activation.
@@ -45,59 +45,3 @@ The sidebar SHALL reflect external filesystem changes in real time via chokidar.
 #### Scenario: File renamed externally
 - **WHEN** a file is renamed externally
 - **THEN** sidebar removes the old node and adds the renamed node; any open tab updates its label
-
-### Requirement: File type icons
-Each file in the sidebar SHALL display a type-specific icon based on its extension. Supported extensions: `.md`, `.orqa`, `.csv`, `.xlsx`, `.pdf`, `.docx`, `.mmd`, `.excalidraw`, `.drawio`. Unsupported extensions SHALL show a generic file icon and appear greyed out.
-
-#### Scenario: Supported file icon
-- **WHEN** sidebar renders a `.md` file
-- **THEN** the file node displays the Markdown icon with full opacity
-
-#### Scenario: Unsupported file
-- **WHEN** sidebar renders a `.zip` file
-- **THEN** the file node displays a generic file icon at reduced opacity (greyed out)
-
-#### Scenario: Open unsupported file
-- **WHEN** user double-clicks an unsupported file in the sidebar
-- **THEN** system opens the file in the macOS default application via `shell.openPath`
-
-### Requirement: Sidebar context menu
-Right-clicking a file or folder in the sidebar SHALL display a native context menu with actions: New File, New Folder, Rename, Delete, Reveal in Finder, Copy Path.
-
-#### Scenario: Create new file
-- **WHEN** user selects "New File" from context menu
-- **THEN** system prompts for a filename, creates the file on disk in the right-clicked directory, and adds it to the sidebar
-
-#### Scenario: Delete file
-- **WHEN** user selects "Delete" from context menu
-- **THEN** system shows a confirmation dialog and, if confirmed, moves the item to Trash via `shell.trashItem`
-
-#### Scenario: Rename file
-- **WHEN** user selects "Rename" from context menu
-- **THEN** the file name becomes an inline editable text field; pressing Enter renames the file on disk
-
-#### Scenario: Reveal in Finder
-- **WHEN** user selects "Reveal in Finder" from context menu
-- **THEN** system opens Finder with the item selected via `shell.showItemInFolder`
-
-### Requirement: Create new file from context menu
-The file tree context menu SHALL include a "New Spreadsheet" option that creates a blank `.xlsx` file in the selected directory.
-
-#### Scenario: Create new spreadsheet
-- **WHEN** a user right-clicks a directory in the file tree and selects "New Spreadsheet"
-- **THEN** the system SHALL show an inline input field (matching existing "New File" behavior) for the user to enter a file name, defaulting to `.xlsx` extension
-
-#### Scenario: Create xlsx via New File
-- **WHEN** a user selects "New File" and types a filename ending in `.xlsx`
-- **THEN** the system SHALL create a valid blank XLSX workbook file (not an empty text file)
-
-### Requirement: Drag and drop reorder
-Users SHALL be able to drag files and folders within the sidebar to move them to different directories. Moving an item in the sidebar MUST move the file on disk.
-
-#### Scenario: Move file to folder
-- **WHEN** user drags a file onto a folder in the sidebar
-- **THEN** system moves the file on disk into that folder and updates the sidebar tree
-
-#### Scenario: Invalid drop target
-- **WHEN** user drags a folder onto one of its own descendants
-- **THEN** system rejects the drop and shows no change
