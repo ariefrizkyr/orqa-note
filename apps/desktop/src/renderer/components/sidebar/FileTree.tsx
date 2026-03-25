@@ -7,6 +7,8 @@ import { getFileIcon, extname as getExt, dirname } from '../../lib/file-utils'
 import { createEmptyXlsxBytes } from '@orqa-note/spreadsheet'
 import type { FileNode, BookmarkFile } from '../../../shared/types'
 
+let toggleGeneration = 0
+
 export interface InlineCreateState {
   path: string
   type: 'file' | 'folder'
@@ -53,8 +55,28 @@ export function FileTree({ onContextMenu, onEmptySpaceContextMenu, inlineCreate,
       toggleExpanded(path)
 
       if (!isExpanded) {
-        const children = await window.electronAPI.fs.readDir(path)
-        updateNodeChildren(path, children)
+        const myGeneration = ++toggleGeneration
+
+        // Collect expanded descendants to reload in parallel
+        const prefix = path + '/'
+        const descendants = [...expandedPaths].filter((p) => p.startsWith(prefix))
+        const pathsToLoad = [path, ...descendants]
+
+        const results = await Promise.all(
+          pathsToLoad.map(async (p) => ({
+            path: p,
+            children: await window.electronAPI.fs.readDir(p)
+          }))
+        )
+
+        // Discard if another toggle happened while loading
+        if (myGeneration !== toggleGeneration) return
+
+        // Apply top-down so parent nodes exist before children are updated
+        results.sort((a, b) => a.path.split('/').length - b.path.split('/').length)
+        for (const { path: p, children } of results) {
+          updateNodeChildren(p, children)
+        }
       }
     },
     [expandedPaths, toggleExpanded, updateNodeChildren]

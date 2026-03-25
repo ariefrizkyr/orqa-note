@@ -8,6 +8,7 @@ import type { FSEvent } from '../../shared/types'
  * Tracks file paths written by our own save operations so the fs watcher
  * can ignore the resulting change events instead of prompting the user.
  */
+const fsEventGeneration = new Map<string, number>()
 const selfWrittenPaths = new Map<string, ReturnType<typeof setTimeout>>()
 const SELF_WRITE_WINDOW_MS = 2000
 
@@ -70,13 +71,38 @@ export function useFsEvents(): void {
 
       if (!isVisible) return
 
+      // Generation guard: discard stale results when rapid events fire for the same dir
+      const gen = (fsEventGeneration.get(parentDir) ?? 0) + 1
+      fsEventGeneration.set(parentDir, gen)
+
       // Re-read the parent directory to get updated listing
       try {
         const nodes = await window.electronAPI.fs.readDir(parentDir)
+        if (gen !== fsEventGeneration.get(parentDir)) return
+
         if (parentDir === workspacePath) {
           useWorkspaceStore.getState().setRootNodes(nodes)
         } else {
           useWorkspaceStore.getState().updateNodeChildren(parentDir, nodes)
+        }
+
+        // Reload children for any expanded subdirectories whose data was replaced
+        const currentExpanded = useWorkspaceStore.getState().expandedPaths
+        const expandedChildren = nodes.filter(
+          (n) => n.type === 'directory' && currentExpanded.has(n.path)
+        )
+        if (expandedChildren.length > 0) {
+          const results = await Promise.all(
+            expandedChildren.map(async (n) => ({
+              path: n.path,
+              children: await window.electronAPI.fs.readDir(n.path)
+            }))
+          )
+          if (gen !== fsEventGeneration.get(parentDir)) return
+
+          for (const { path, children } of results) {
+            useWorkspaceStore.getState().updateNodeChildren(path, children)
+          }
         }
       } catch {
         // Directory may have been deleted
