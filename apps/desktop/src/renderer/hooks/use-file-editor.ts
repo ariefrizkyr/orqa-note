@@ -29,13 +29,15 @@ export function useFileEditor({ filePath, tabId }: UseFileEditorOptions): UseFil
   const contentVersion = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.contentVersion ?? 0)
 
   useEffect(() => {
+    let cancelled = false
     setContent(null)
     setError(false)
     setSaveError(false)
     setBaseline(null)
     window.electronAPI.fs.readFile(filePath)
-      .then(setContent)
-      .catch(() => setError(true))
+      .then((data) => { if (!cancelled) setContent(data) })
+      .catch(() => { if (!cancelled) setError(true) })
+    return () => { cancelled = true }
   }, [filePath, contentVersion])
 
   const handleSave = useCallback(async (text: string) => {

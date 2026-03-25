@@ -11,6 +11,7 @@ import type { SpreadsheetEditorHandle } from '@orqa-note/spreadsheet'
 import { ExcalidrawEditor } from '@orqa-note/excalidraw'
 import type { ExcalidrawEditorHandle, ExportImageData } from '@orqa-note/excalidraw'
 import { useFileEditor } from '../../hooks/use-file-editor'
+import { useSaveOnTabSwitch } from '../../hooks/use-save-on-tab-switch'
 import { extname, basename } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
 import { WebviewToolbar } from '../webview/WebviewToolbar'
@@ -70,6 +71,8 @@ function MarkdownEditor({ filePath, tabId }: { filePath: string; tabId: string }
     debounceMs: 2000,
   })
 
+  useSaveOnTabSwitch(tabId, editorRef, baseline)
+
   if (error) return <ErrorState message="Failed to load file" />
   if (content === null) return <LoadingState />
 
@@ -112,6 +115,8 @@ function CodeFileEditor({ filePath, tabId }: { filePath: string; tabId: string }
     debounceMs: 2000,
   })
 
+  useSaveOnTabSwitch(tabId, editorRef, baseline)
+
   if (error) return <ErrorState message="Failed to load file" />
   if (content === null) return <LoadingState />
 
@@ -143,18 +148,20 @@ function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: s
   const isDirty = useTabStore((s) => s.tabs.find((t) => t.id === tabId)?.isDirty ?? false)
 
   useEffect(() => {
+    let cancelled = false
     setData(null)
     setError(false)
     setSaveError(false)
     if (fileType === 'csv') {
       window.electronAPI.fs.readFile(filePath)
-        .then(setData)
-        .catch(() => setError(true))
+        .then((d) => { if (!cancelled) setData(d) })
+        .catch(() => { if (!cancelled) setError(true) })
     } else {
       window.electronAPI.fs.readBinaryFile(filePath)
-        .then((buf) => setData(new Uint8Array(buf)))
-        .catch(() => setError(true))
+        .then((buf) => { if (!cancelled) setData(new Uint8Array(buf)) })
+        .catch(() => { if (!cancelled) setError(true) })
     }
+    return () => { cancelled = true }
   }, [filePath, fileType])
 
   const handleChange = useCallback(() => {
@@ -180,6 +187,8 @@ function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: s
     onSave: () => editorRef.current?.save(),
     debounceMs: 2000,
   })
+
+  useSaveOnTabSwitch(tabId, editorRef)
 
   if (error) return <ErrorState message="Failed to load spreadsheet" />
   if (data === null) return <LoadingState />
@@ -222,6 +231,8 @@ function ExcalidrawFileEditor({ filePath, tabId }: { filePath: string; tabId: st
     debounceMs: 2000,
   })
 
+  useSaveOnTabSwitch(tabId, editorRef, baseline)
+
   const handleExportImage = useCallback(async (data: ExportImageData) => {
     const ext = data.mimeType === 'image/png' ? 'png' : 'svg'
     const savePath = await window.electronAPI.fs.showSaveDialog({
@@ -259,11 +270,13 @@ function PdfFileViewer({ filePath }: { filePath: string }) {
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    let cancelled = false
     setData(null)
     setError(false)
     window.electronAPI.fs.readBinaryFile(filePath)
-      .then((buf) => setData(new Uint8Array(buf)))
-      .catch(() => setError(true))
+      .then((buf) => { if (!cancelled) setData(new Uint8Array(buf)) })
+      .catch(() => { if (!cancelled) setError(true) })
+    return () => { cancelled = true }
   }, [filePath])
 
   if (error) return <ErrorState message="Failed to load PDF" />
@@ -362,13 +375,13 @@ export function ContentArea() {
     const ext = activeTab.filePath ? extname(activeTab.filePath) : ''
 
     if (ext === 'md') {
-      content = <MarkdownEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <MarkdownEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (ext === 'pdf') {
-      content = <PdfFileViewer filePath={activeTab.filePath!} />
+      content = <PdfFileViewer key={activeTab.id} filePath={activeTab.filePath!} />
     } else if (ext === 'xlsx' || ext === 'csv') {
-      content = <SpreadsheetFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <SpreadsheetFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (ext === 'excalidraw') {
-      content = <ExcalidrawFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <ExcalidrawFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (isBinaryExtension(ext)) {
       content = (
         <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
@@ -389,7 +402,7 @@ export function ContentArea() {
         </div>
       )
     } else {
-      content = <CodeFileEditor filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <CodeFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
     }
   }
 
