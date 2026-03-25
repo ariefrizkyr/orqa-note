@@ -90,19 +90,17 @@ export function useFsEvents(): void {
         }
       }
 
-      // Handle external file changes
+      // Handle external file changes — disk is source of truth, always reload
       if (event.type === 'change') {
         // Ignore change events caused by our own save operations
         if (consumeSelfWritten(event.path)) return
 
         const tab = useTabStore.getState().findTabByFilePath(event.path)
-        if (tab && !tab.isDirty) {
-          // Not dirty — force content reload by bumping version
+        if (tab) {
           useTabStore.getState().updateTab(tab.id, {
             contentVersion: (tab.contentVersion ?? 0) + 1
           })
         }
-        // If dirty, keep the user's version silently
       }
     })
 

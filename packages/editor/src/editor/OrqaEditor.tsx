@@ -32,11 +32,13 @@ export interface OrqaEditorProps {
   initialContent: string
   onSave: (markdown: string) => void
   onChange?: () => void
+  onReady?: (serializedContent: string) => void
   onLinkClick?: (href: string) => void
 }
 
 export interface OrqaEditorHandle {
   save: () => void
+  getContent: () => string | null
   openFind: () => void
 }
 
@@ -398,6 +400,7 @@ function EditorWithHandle({
   frontmatter,
   onSaveRef,
   onChangeRef,
+  onReadyRef,
   onLinkClickRef,
   handleRef,
 }: {
@@ -405,6 +408,7 @@ function EditorWithHandle({
   frontmatter: string | null
   onSaveRef: MutableRefObject<(markdown: string) => void>
   onChangeRef: MutableRefObject<(() => void) | undefined>
+  onReadyRef: MutableRefObject<((content: string) => void) | undefined>
   onLinkClickRef: MutableRefObject<((href: string) => void) | undefined>
   handleRef: MutableRefObject<OrqaEditorHandle | null>
 }) {
@@ -432,7 +436,8 @@ function EditorWithHandle({
     syncFindBarVisible(findBarVisible)
   }, [findBarVisible])
 
-  const save = useCallback(() => {
+  // Fire onReady with serialized content when editor finishes initializing
+  useEffect(() => {
     if (loading) return
     const editor = getInstance()
     if (!editor) return
@@ -441,16 +446,34 @@ function EditorWithHandle({
     const serializer = ctx.get(serializerCtx)
     const markdown = serializer(view.state.doc)
     const full = prependFrontmatter(frontmatter, markdown)
-    onSaveRef.current(full)
-  }, [loading, getInstance, frontmatter, onSaveRef])
+    onReadyRef.current?.(full)
+  }, [loading, getInstance, frontmatter, onReadyRef])
+
+  const getContent = useCallback((): string | null => {
+    if (loading) return null
+    const editor = getInstance()
+    if (!editor) return null
+    const ctx = editor.ctx
+    const view = ctx.get(editorViewCtx)
+    const serializer = ctx.get(serializerCtx)
+    const markdown = serializer(view.state.doc)
+    return prependFrontmatter(frontmatter, markdown)
+  }, [loading, getInstance, frontmatter])
+
+  const save = useCallback(() => {
+    const full = getContent()
+    if (full != null) {
+      onSaveRef.current(full)
+    }
+  }, [getContent, onSaveRef])
 
   const openFind = useCallback(() => {
     openFindBar('find')
   }, [openFindBar])
 
-  // Expose save and openFind to parent via mutable ref
-  if (handleRef.current?.save !== save || handleRef.current?.openFind !== openFind) {
-    handleRef.current = { save, openFind }
+  // Expose save, getContent, and openFind to parent via mutable ref
+  if (handleRef.current?.save !== save || handleRef.current?.getContent !== getContent || handleRef.current?.openFind !== openFind) {
+    handleRef.current = { save, getContent, openFind }
   }
 
   return (
@@ -466,12 +489,14 @@ function EditorWithHandle({
 }
 
 export const OrqaEditor = forwardRef<OrqaEditorHandle, OrqaEditorProps>(
-  function OrqaEditor({ initialContent, onSave, onChange, onLinkClick }, ref) {
+  function OrqaEditor({ initialContent, onSave, onChange, onReady, onLinkClick }, ref) {
     const onSaveRef = useRef(onSave)
     const onChangeRef = useRef(onChange)
+    const onReadyRef = useRef(onReady)
     const onLinkClickRef = useRef(onLinkClick)
     onSaveRef.current = onSave
     onChangeRef.current = onChange
+    onReadyRef.current = onReady
     onLinkClickRef.current = onLinkClick
 
     const { frontmatter, body } = useMemo(
@@ -483,6 +508,7 @@ export const OrqaEditor = forwardRef<OrqaEditorHandle, OrqaEditorProps>(
 
     useImperativeHandle(ref, () => ({
       save: () => handleRef.current?.save(),
+      getContent: () => handleRef.current?.getContent() ?? null,
       openFind: () => handleRef.current?.openFind(),
     }), [])
 
@@ -493,6 +519,7 @@ export const OrqaEditor = forwardRef<OrqaEditorHandle, OrqaEditorProps>(
           frontmatter={frontmatter}
           onSaveRef={onSaveRef}
           onChangeRef={onChangeRef}
+          onReadyRef={onReadyRef}
           onLinkClickRef={onLinkClickRef}
           handleRef={handleRef}
         />
