@@ -46,13 +46,6 @@ The system SHALL display a visual indicator on the tab when a document has unsav
 - **WHEN** the document is saved (auto or manual)
 - **THEN** the dirty indicator is removed from the tab
 
-### Requirement: Save status display
-The system SHALL display a save status message in the editor area.
-
-#### Scenario: After successful save
-- **WHEN** auto-save completes successfully
-- **THEN** the editor briefly displays "Auto-saved" with a checkmark, fading after 2 seconds
-
 ### Requirement: External change conflict handling
 The system SHALL detect when a file is modified externally and always reload the file content into the editor, treating disk as the source of truth regardless of the editor's dirty state.
 
