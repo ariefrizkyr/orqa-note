@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, Menu, clipboard, shell } from 'electron'
 import { join, basename } from 'path'
 import { stopWatching } from './fs-watcher'
 import {
@@ -31,6 +31,41 @@ export function createWindow(groupId?: string): BrowserWindow {
     // Set title asynchronously from group data
     updateWindowTitle(win.id)
   }
+
+  // Native right-click context menu for every editable surface in the window
+  // (Milkdown, CodeMirror, Excalidraw, Spreadsheet, plain inputs).
+  win.webContents.on('context-menu', (_event, params) => {
+    const { editFlags, selectionText, isEditable, linkURL } = params
+    const hasText = selectionText.trim().length > 0
+    const template: Electron.MenuItemConstructorOptions[] = []
+
+    if (linkURL) {
+      template.push(
+        { label: 'Open Link in Browser', click: () => { void shell.openExternal(linkURL) } },
+        { label: 'Copy Link', click: () => clipboard.writeText(linkURL) },
+        { type: 'separator' },
+      )
+    }
+
+    if (isEditable) {
+      template.push(
+        { role: 'undo', enabled: editFlags.canUndo },
+        { role: 'redo', enabled: editFlags.canRedo },
+        { type: 'separator' },
+        { role: 'cut', enabled: editFlags.canCut },
+        { role: 'copy', enabled: editFlags.canCopy },
+        { role: 'paste', enabled: editFlags.canPaste },
+        { type: 'separator' },
+        { role: 'selectAll' },
+      )
+    } else if (hasText) {
+      template.push({ role: 'copy' })
+    }
+
+    if (template.length > 0) {
+      Menu.buildFromTemplate(template).popup({ window: win })
+    }
+  })
 
   // In dev, load from vite dev server; in prod, load the built file
   if (process.env.ELECTRON_RENDERER_URL) {

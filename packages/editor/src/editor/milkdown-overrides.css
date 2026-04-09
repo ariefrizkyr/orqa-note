@@ -435,3 +435,44 @@
   width: 20px;
   flex-shrink: 0;
 }
+
+/* Link hover popover (orqa-link-hover plugin) */
+.orqa-link-popover {
+  position: absolute;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  max-width: 420px;
+  padding: 6px 10px;
+  background: #2e3440;
+  border: 1px solid #434c5e;
+  border-radius: 6px;
+  font-size: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+  color: #eceff4;
+}
+
+.orqa-link-popover-url {
+  color: #88c0d0;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.orqa-link-popover-open {
+  color: #eceff4;
+  background: #4c566a;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.orqa-link-popover-open:hover {
+  background: #5e81ac;
+}
