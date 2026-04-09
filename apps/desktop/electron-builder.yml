@@ -6,6 +6,10 @@ directories:
 npmRebuild: false
 files:
   - out/**/*
+  - "!**/node_modules/**/{README,readme,CHANGELOG,changelog,HISTORY,history}*"
+  - "!**/node_modules/**/*.{md,markdown,map,ts,tsx,flow}"
+  - "!**/node_modules/**/{test,tests,__tests__,example,examples,docs,doc}/**"
+  - "!**/node_modules/**/.github/**"
 mac:
   forceCodeSigning: true
   category: public.app-category.productivity
