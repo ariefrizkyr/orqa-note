@@ -1,6 +1,6 @@
 import type { MutableRefObject } from 'react'
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
-import { Editor, rootCtx, defaultValueCtx, editorViewCtx, serializerCtx } from '@milkdown/kit/core'
+import { Editor, rootCtx, defaultValueCtx, editorViewCtx, serializerCtx, schemaCtx } from '@milkdown/kit/core'
 import {
   commonmark,
   hardbreakFilterNodes,
@@ -17,8 +17,10 @@ import { Milkdown, MilkdownProvider, useEditor, useInstance } from '@milkdown/re
 import { nord } from '@milkdown/theme-nord'
 import { slashFactory, SlashProvider } from '@milkdown/plugin-slash'
 import { diagram, diagramSchema, mermaidConfigCtx } from '@milkdown/plugin-diagram'
-import { $view, $prose } from '@milkdown/utils'
+import { $view, $prose, $inputRule } from '@milkdown/utils'
 import { Plugin, PluginKey } from '@milkdown/kit/prose/state'
+import { InputRule } from '@milkdown/kit/prose/inputrules'
+import { Slice, Fragment } from '@milkdown/kit/prose/model'
 import { createRoot } from 'react-dom/client'
 import mermaid from 'mermaid'
 import '@milkdown/theme-nord/style.css'
@@ -243,6 +245,202 @@ const linkClickPlugin = $prose(() => new Plugin({
   },
 }))
 
+// --- URL auto-linking ---
+// Matches http(s):// or www. URLs. Trailing punctuation is stripped so
+// "see https://example.com." doesn't include the period in the link.
+const URL_REGEX_GLOBAL = /((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?'"])/g
+// Input rule version: URL followed by a space/newline at the cursor.
+// The regex must end with $ since input rules match text before the cursor.
+const URL_INPUT_REGEX = /(^|\s)((?:https?:\/\/|www\.)[^\s<>()]+[^\s<>().,;:!?'"])(\s)$/
+
+const normalizeHref = (raw: string): string =>
+  raw.startsWith('www.') ? `https://${raw}` : raw
+
+const urlInputRule = $inputRule((ctx) => new InputRule(
+  URL_INPUT_REGEX,
+  (state, match, start, end) => {
+    const schema = ctx.get(schemaCtx)
+    const linkMark = schema.marks.link
+    if (!linkMark) return null
+    const [, leading = '', url] = match
+    if (!url) return null
+    // Don't re-wrap if the URL text already carries a link mark
+    const $urlStart = state.doc.resolve(start + leading.length)
+    if ($urlStart.marks().some((m) => m.type === linkMark)) return null
+
+    const href = normalizeHref(url)
+    const urlFrom = start + leading.length
+    const urlTo = urlFrom + url.length
+    const tr = state.tr.addMark(urlFrom, urlTo, linkMark.create({ href }))
+    // Preserve the trailing space by inserting it explicitly (it was part of
+    // the match that triggered the rule — the input rule intercepts before
+    // the default text input would insert it).
+    tr.insertText(' ', end, end)
+    // The inserted space inherits marks from the position before it (left
+    // gravity), which is now inside the freshly-added link mark. Strip the
+    // link mark from the space so subsequent typing doesn't continue the link.
+    tr.removeMark(end, end + 1, linkMark)
+    // Also clear any stored link mark so the very next keystroke after the
+    // space starts a clean run.
+    tr.removeStoredMark(linkMark)
+    return tr
+  },
+))
+
+// --- Paste URL linkification ---
+// If a pasted plain-text slice is (or contains) a URL, wrap it in a link mark.
+// Special case: if there's a non-empty selection and the clipboard is exactly
+// one URL, wrap the existing selection as a link (Notion/Slack behavior).
+const urlPastePlugin = $prose((ctx) => new Plugin({
+  key: new PluginKey('orqa-url-paste'),
+  props: {
+    handlePaste(view, event, slice) {
+      const text = event.clipboardData?.getData('text/plain') ?? ''
+      if (!text) return false
+      const schema = ctx.get(schemaCtx)
+      const linkMark = schema.marks.link
+      if (!linkMark) return false
+
+      const trimmed = text.trim()
+      const singleUrlMatch = trimmed.match(/^(?:https?:\/\/|www\.)[^\s<>()]+$/)
+
+      // Case 1: non-empty selection + clipboard is exactly a URL → wrap selection as link
+      const { selection, tr } = view.state
+      if (singleUrlMatch && !selection.empty) {
+        const href = normalizeHref(trimmed)
+        tr.addMark(selection.from, selection.to, linkMark.create({ href }))
+        tr.removeStoredMark(linkMark)
+        view.dispatch(tr.scrollIntoView())
+        return true
+      }
+
+      // Case 2: plain-text paste containing one or more URLs → linkify them
+      if (!URL_REGEX_GLOBAL.test(text)) return false
+      // Only handle plain-text pastes (let rich HTML/markdown pastes fall through
+      // so the existing parser handles them).
+      const isPlainTextSlice =
+        slice.content.childCount === 1 &&
+        slice.content.firstChild?.isTextblock === false &&
+        slice.content.firstChild?.isText === true
+      // Fallback detection: the default commonmark handler usually converts
+      // plain text into a single text node wrapped in the current block.
+      const looksLikePlain = !event.clipboardData?.types.includes('text/html')
+      if (!looksLikePlain && !isPlainTextSlice) return false
+
+      // Build a fragment: split the text on URL matches, wrap URL segments in
+      // the link mark, leave the rest as-is.
+      URL_REGEX_GLOBAL.lastIndex = 0
+      const nodes: ReturnType<typeof schema.text>[] = []
+      let lastIndex = 0
+      let m: RegExpExecArray | null
+      while ((m = URL_REGEX_GLOBAL.exec(text)) !== null) {
+        if (m.index > lastIndex) {
+          nodes.push(schema.text(text.slice(lastIndex, m.index)))
+        }
+        const url = m[1]!
+        const href = normalizeHref(url)
+        nodes.push(schema.text(url, [linkMark.create({ href })]))
+        lastIndex = m.index + url.length
+      }
+      if (lastIndex < text.length) {
+        nodes.push(schema.text(text.slice(lastIndex)))
+      }
+      if (nodes.length === 0) return false
+
+      const replacement = Slice.maxOpen(Fragment.fromArray(nodes))
+      view.dispatch(view.state.tr.replaceSelection(replacement).scrollIntoView())
+      return true
+    },
+  },
+}))
+
+// --- Link hover popover ---
+// Shows a floating "Open ↗" button next to any hovered link so users have a
+// visible affordance beyond Cmd/Ctrl+Click.
+const linkHoverPlugin = $prose(() => new Plugin({
+  key: new PluginKey('orqa-link-hover'),
+  view(editorView) {
+    const popover = document.createElement('div')
+    popover.className = 'orqa-link-popover'
+    popover.style.display = 'none'
+
+    let hideTimer: number | null = null
+    const cancelHide = () => {
+      if (hideTimer !== null) {
+        window.clearTimeout(hideTimer)
+        hideTimer = null
+      }
+    }
+    const scheduleHide = () => {
+      cancelHide()
+      hideTimer = window.setTimeout(() => {
+        popover.style.display = 'none'
+      }, 150)
+    }
+
+    popover.addEventListener('mouseenter', cancelHide)
+    popover.addEventListener('mouseleave', scheduleHide)
+    document.body.appendChild(popover)
+
+    const showAt = (rect: DOMRect, href: string) => {
+      popover.innerHTML = ''
+      const urlEl = document.createElement('span')
+      urlEl.className = 'orqa-link-popover-url'
+      urlEl.textContent = href.length > 60 ? `${href.slice(0, 57)}…` : href
+      const openBtn = document.createElement('button')
+      openBtn.type = 'button'
+      openBtn.className = 'orqa-link-popover-open'
+      openBtn.textContent = 'Open ↗'
+      openBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (linkClickCallback) {
+          linkClickCallback(href)
+        } else {
+          window.open(href, '_blank')
+        }
+      })
+      popover.appendChild(urlEl)
+      popover.appendChild(openBtn)
+      popover.style.display = 'flex'
+      popover.style.top = `${rect.bottom + window.scrollY + 4}px`
+      popover.style.left = `${rect.left + window.scrollX}px`
+    }
+
+    const onMouseOver = (event: Event) => {
+      const target = (event.target as HTMLElement | null)?.closest?.('a') as HTMLAnchorElement | null
+      if (!target) return
+      const href = target.getAttribute('href')
+      if (!href) return
+      cancelHide()
+      showAt(target.getBoundingClientRect(), href)
+    }
+    const onMouseOut = (event: Event) => {
+      const mouseEvent = event as MouseEvent
+      const target = (mouseEvent.target as HTMLElement | null)?.closest?.('a')
+      if (!target) return
+      const related = mouseEvent.relatedTarget as HTMLElement | null
+      if (related && popover.contains(related)) return
+      scheduleHide()
+    }
+
+    // Scope to this editor's DOM so multiple editors don't share popovers
+    // and sidebar/webview links don't trigger it.
+    const root = editorView.dom
+    root.addEventListener('mouseover', onMouseOver)
+    root.addEventListener('mouseout', onMouseOut)
+
+    return {
+      destroy() {
+        cancelHide()
+        root.removeEventListener('mouseover', onMouseOver)
+        root.removeEventListener('mouseout', onMouseOut)
+        popover.remove()
+      },
+    }
+  },
+}))
+
 function MilkdownEditor({
   defaultValue,
   onChangeRef,
@@ -381,6 +579,9 @@ function MilkdownEditor({
       .use(diagramView)
       .use(tableHardbreakPlugin)
       .use(linkClickPlugin)
+      .use(linkHoverPlugin)
+      .use(urlInputRule)
+      .use(urlPastePlugin)
       .use(searchPlugin)
       .use(searchKeymapPlugin)
   }, [defaultValue])

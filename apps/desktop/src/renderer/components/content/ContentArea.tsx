@@ -374,14 +374,19 @@ export function ContentArea() {
   } else {
     const ext = activeTab.filePath ? extname(activeTab.filePath) : ''
 
+    // Include contentVersion in the key so the editor fully remounts
+    // when an external writer (e.g. VS Code) updates the file on disk.
+    // Disk is source of truth — unsaved in-memory edits are discarded on remount.
+    const reloadKey = `${activeTab.id}:${activeTab.contentVersion ?? 0}`
+
     if (ext === 'md') {
-      content = <MarkdownEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <MarkdownEditor key={reloadKey} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (ext === 'pdf') {
-      content = <PdfFileViewer key={activeTab.id} filePath={activeTab.filePath!} />
+      content = <PdfFileViewer key={reloadKey} filePath={activeTab.filePath!} />
     } else if (ext === 'xlsx' || ext === 'csv') {
-      content = <SpreadsheetFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <SpreadsheetFileEditor key={reloadKey} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (ext === 'excalidraw') {
-      content = <ExcalidrawFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <ExcalidrawFileEditor key={reloadKey} filePath={activeTab.filePath!} tabId={activeTab.id} />
     } else if (isBinaryExtension(ext)) {
       content = (
         <div className="flex h-full flex-col items-center justify-center gap-4 text-neutral-400">
@@ -402,7 +407,7 @@ export function ContentArea() {
         </div>
       )
     } else {
-      content = <CodeFileEditor key={activeTab.id} filePath={activeTab.filePath!} tabId={activeTab.id} />
+      content = <CodeFileEditor key={reloadKey} filePath={activeTab.filePath!} tabId={activeTab.id} />
     }
   }
 
