@@ -16,35 +16,35 @@
     "postinstall": "node scripts/fix-node-pty.js"
   },
   "dependencies": {
+    "chokidar": "^4.0.0",
+    "electron-updater": "^6.3.9",
+    "node-pty": "^1.1.0"
+  },
+  "devDependencies": {
+    "@electron-toolkit/preload": "^3.0.1",
+    "@electron-toolkit/utils": "^3.0.0",
     "@orqa-note/code-editor": "workspace:*",
     "@orqa-note/editor": "workspace:*",
     "@orqa-note/excalidraw": "workspace:*",
     "@orqa-note/pdf-viewer": "workspace:*",
     "@orqa-note/spreadsheet": "workspace:*",
-    "@xterm/addon-fit": "^0.11.0",
-    "@xterm/xterm": "^6.0.0",
-    "chokidar": "^4.0.0",
-    "electron-updater": "^6.3.9",
-    "fuse.js": "^7.0.0",
-    "node-pty": "^1.1.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "uuid": "^11.0.0",
-    "zustand": "^5.0.0"
-  },
-  "devDependencies": {
-    "@electron-toolkit/preload": "^3.0.1",
-    "@electron-toolkit/utils": "^3.0.0",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "fuse.js": "^7.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "uuid": "^11.0.0",
+    "zustand": "^5.0.0"
   }
 }
