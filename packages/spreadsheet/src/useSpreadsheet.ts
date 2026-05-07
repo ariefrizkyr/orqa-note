@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import { createUniver as createUniverFn, LocaleType, mergeLocales } from '@univerjs/presets'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverPresetSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
+import { CommandType } from '@univerjs/core'
 import type { IWorkbookData } from '@univerjs/core'
 
 type FUniver = ReturnType<typeof createUniverFn>['univerAPI']
@@ -46,7 +47,8 @@ export function useSpreadsheet({
     univerAPIRef.current = univerAPI
     univerAPI.createWorkbook(workbookData)
 
-    const disposable = univerAPI.onCommandExecuted(() => {
+    const disposable = univerAPI.onCommandExecuted((commandInfo) => {
+      if (commandInfo.type !== CommandType.MUTATION) return
       onChangeRef.current?.()
     })
 

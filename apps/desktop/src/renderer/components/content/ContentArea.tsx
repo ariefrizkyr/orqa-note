@@ -11,6 +11,7 @@ import type { SpreadsheetEditorHandle } from '@orqa-note/spreadsheet'
 import { ExcalidrawEditor } from '@orqa-note/excalidraw'
 import type { ExcalidrawEditorHandle, ExportImageData } from '@orqa-note/excalidraw'
 import { useFileEditor } from '../../hooks/use-file-editor'
+import { markSelfWritten } from '../../hooks/use-fs-events'
 import { useSaveOnTabSwitch } from '../../hooks/use-save-on-tab-switch'
 import { extname, basename } from '../../lib/file-utils'
 import { NewTabScreen } from '../tabs/NewTabScreen'
@@ -170,6 +171,7 @@ function SpreadsheetFileEditor({ filePath, tabId }: { filePath: string; tabId: s
 
   const handleSave = useCallback(async (saveData: Uint8Array | string) => {
     try {
+      markSelfWritten(filePath)
       if (fileType === 'csv') {
         await window.electronAPI.fs.writeFile(filePath, saveData as string)
       } else {
